@@ -1,0 +1,142 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% Sort the raw data in preperation for post processing - stage 1
+
+close all
+clear all
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% List of individual IDs and information on if there is a second file associated with each individual - this could be automised - note these ID'd should correspond to the files to be read in.
+
+PupIDs=[140059;140060;140061;140062;140063;140064;140065;140066;140067;140068;140069;140070;140071;140072;140073;140074;140075;140076;140077;140078];
+SecondFile=[1;1;1;1;1;0;0;1;1;1;1;0;1;1;1;0;1;1;1;1];
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% Create deposite folders
+
+f1=fullfile('.\dataOUT_masterFOLDER'); % NOTE - set to the folder where all data is to be read
+if (exist(f1) == 0)
+   mkdir (f1);
+end
+clear f1
+
+f1=fullfile('.\dataOUT_FOLDER_ONE'); % NOTE - create sub folder to read out data from stage 1 of processing
+if (exist(f1) == 0)
+   mkdir (f1);
+end
+clear f1
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% Loop through all data
+
+for LoopID=1:size(PupIDs,1);
+    
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    %% 1st file
+    
+    fid=fopen(['.\dataIn_ROUTE\', 'dataIN_FILE', num2str(PupIDs(LoopID)),'-DSA.csv'],'r');  % NOTE - this is to read data in - I used the pupID identifier for each file but this could be streamlined better.
+    
+    %%%% Get the number of headerlines in a file - this can vary between files occasionally
+    aa=1;
+    HeaderCount=0;
+    
+    while(aa==1)
+        str=fgets(fid);
+        aa=isempty(str2num(str(1)));
+        if(strcmp(str(1),'"')==1);
+            aa=0;
+        end        
+        if(aa==1);
+            HeaderCount=HeaderCount+1;
+        end
+        clear str
+    end
+    clear aa
+    fclose(fid);
+
+    %%%% Read in the file
+    fid=fopen(['.\dataIn_ROUTE\', 'dataIN_FILE', num2str(PupIDs(LoopID)),'-DSA.csv'],'r'); % NOTE AGAIN - this is to read data in - I used the pupID identifier for each file but this could be streamlined better. 
+    B=textscan(fid,'%s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s','delimiter',',','headerlines',HeaderCount);
+    [A_Rpup(:,1),A_Rpup(:,2),A_Rpup(:,3),A_Rpup(:,4),A_Rpup(:,5),A_Rpup(:,6),A_Rpup(:,7),A_Rpup(:,8),A_Rpup(:,9),A_Rpup(:,10),A_Rpup(:,11),A_Rpup(:,12),A_Rpup(:,13),A_Rpup(:,14),A_Rpup(:,15),A_Rpup(:,16),A_Rpup(:,17),A_Rpup(:,18),A_Rpup(:,19),A_Rpup(:,20)]=deal(B{:});
+    fclose(fid);
+    clear HeaderCount
+
+    %%%% Fill empty spaces with NaNs
+    for II=1:size(A_Rpup,2);
+        for JJ=1:size(char(A_Rpup{:,1}),1);
+            if(isempty(A_Rpup{JJ,II}) == 1);
+                A_Rpup{JJ,II}=NaN;
+            end
+            clear JJ
+        end
+    end
+
+    clear II fid B ans
+
+    if(SecondFile(LoopID)==1)
+        
+        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+        %% 2nd file
+
+        fid=fopen(['.\dataIn_ROUTE\', 'dataIN_FILE', num2str(PupIDs(LoopID)),'-02-DSA.csv'],'r'); % NOTE AGAIN - this is to read data in - I used the pupID identifier for each file but this could be streamlined better. 
+         
+        %%%% Get the number of headerlines in a file
+        aa=1;
+        HeaderCount=0;
+
+        while(aa==1)
+            str=fgets(fid);
+            aa=isempty(str2num(str(1)));
+            if(strcmp(str(1),'"')==1);
+                aa=0;
+            end
+            if(aa==1);
+                HeaderCount=HeaderCount+1;
+            end
+            clear str
+        end
+        clear aa
+        fclose(fid);
+
+        %%%% Read in the file
+        fid=fopen(['.\dataIn_ROUTE\', 'dataIN_FILE', num2str(PupIDs(LoopID)),'-02-DSA.csv'],'r'); % NOTE AGAIN - this is to read data in - I used the pupID identifier for each file but this could be streamlined better. 
+        B=textscan(fid,'%s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s','delimiter',',','headerlines',HeaderCount);
+        [B_Rpup(:,1),B_Rpup(:,2),B_Rpup(:,3),B_Rpup(:,4),B_Rpup(:,5),B_Rpup(:,6),B_Rpup(:,7),B_Rpup(:,8),B_Rpup(:,9),B_Rpup(:,10),B_Rpup(:,11),B_Rpup(:,12),B_Rpup(:,13),B_Rpup(:,14),B_Rpup(:,15),B_Rpup(:,16),B_Rpup(:,17),B_Rpup(:,18),B_Rpup(:,19),B_Rpup(:,20)]=deal(B{:});
+        fclose(fid);
+        clear HeaderCount
+
+        %%%% Fill empty spaces with NaNs
+        for II=1:size(B_Rpup,2);
+            for JJ=1:size(char(B_Rpup{:,1}),1);
+                if(isempty(B_Rpup{JJ,II}) == 1);
+                    B_Rpup{JJ,II}=NaN;
+                end
+                clear JJ
+            end
+        end
+
+        clear II fid B ans
+
+        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+        %% Combine the two files 
+
+        Rpup=[A_Rpup;B_Rpup];
+        clear A_Rpup B_Rpup
+        
+        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    else(SecondFile(LoopID)==0);
+             
+        Rpup=A_Rpup;
+        clear A_Rpup
+        
+    end
+
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    % Write out file
+
+    cell2csv(['.\dataOUT_FOLDER_ONE\',num2str(PupIDs(LoopID)),'_Stage1.csv'],Rpup, ',', 1997, '.', 16)
+
+    clear Rpup
+end
