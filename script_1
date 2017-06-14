@@ -19,7 +19,7 @@ if (exist(f1) == 0)
 end
 clear f1
 
-f1=fullfile('.\dataOUT_FOLDER_ONE'); % NOTE - create sub folder to read out data from stage 1 of processing
+f1=fullfile('.\dataOUT_masterFOLDER\dataOUT_FOLDER_ONE'); % NOTE - create sub folder to read out data from stage 1 of processing
 if (exist(f1) == 0)
    mkdir (f1);
 end
@@ -136,7 +136,7 @@ for LoopID=1:size(PupIDs,1);
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     % Write out file
 
-    cell2csv(['.\dataOUT_FOLDER_ONE\',num2str(PupIDs(LoopID)),'_Stage1.csv'],Rpup, ',', 1997, '.', 16)
+    cell2csv(['.\dataOUT_masterFOLDER\dataOUT_FOLDER_ONE\',num2str(PupIDs(LoopID)),'_Stage1.csv'],Rpup, ',', 1997, '.', 16)
 
     clear Rpup
 end
