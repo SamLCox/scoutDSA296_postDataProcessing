@@ -9,7 +9,7 @@ PupIDs=[140059;140060;140061;140062;140063;140064;140065;140066;140067;140068;14
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% Create folders
 
-f1=fullfile('.\dataOUT_masterFOLDER\dataOUT_FOLDER_TWOa_divePlots'); % NOTE - create sub folder to read out data from stage 2 of processing
+f1=fullfile('.\dataOUT_masterFOLDER\dataOUT_FOLDER_2a_divePlots'); % NOTE - create sub folder to read out data from stage 2 of processing
 if (exist(f1) == 0)
    mkdir (f1);
 end
@@ -82,7 +82,7 @@ for LoopID=1:size(PupIDs,1);
     xlabel('VerticalSpeed (m/sec)')
     ylabel('Frequency')
    
-    export_fig(['.\dataOUT_masterFOLDER\dataOUT_FOLDER_TWOa_divePlots\DepthVertSpeed_Pup',num2str(PupIDs(LoopID)),'.png'],'-zbuffer','-r400','-q1000','-a1')
+    export_fig(['.\dataOUT_masterFOLDER\dataOUT_FOLDER_2a_divePlots\DepthVertSpeed_Pup',num2str(PupIDs(LoopID)),'.png'],'-zbuffer','-r400','-q1000','-a1')
     
     close
     
@@ -122,7 +122,7 @@ for LoopID=1:size(PupIDs,1);
     xlabel('Duration (sec)')
     ylabel('Frequency')
    
-    export_fig(['.\dataOUT_masterFOLDER\dataOUT_FOLDER_TWOa_divePlots\SwimEfPreyCatchDur_Pup',num2str(PupIDs(LoopID)),'.png'],'-zbuffer','-r400','-q1000','-a1')
+    export_fig(['.\dataOUT_masterFOLDER\dataOUT_FOLDER_2a_divePlots\SwimEfPreyCatchDur_Pup',num2str(PupIDs(LoopID)),'.png'],'-zbuffer','-r400','-q1000','-a1')
     
     close
     
@@ -169,7 +169,7 @@ hist(AllVerticalSpeeds,40)
 xlabel('VerticalSpeed (m/sec)')
 ylabel('Frequency')    
 
-export_fig(['.\dataOUT_masterFOLDER\dataOUT_FOLDER_TWOa_divePlots\DepthVertSpeed_AllPups.png'],'-zbuffer','-r400','-q1000','-a1')
+export_fig(['.\dataOUT_masterFOLDER\dataOUT_FOLDER_2a_divePlots\DepthVertSpeed_AllPups.png'],'-zbuffer','-r400','-q1000','-a1')
     
 %%%%%%%%%%%%%%%%%%% Swim effort, PCA and duration
 figure('position',[100,100,1600,1200],'color','w','visible','on')
@@ -207,5 +207,5 @@ hist(AllDuration,40)
 xlabel('Duration (sec)')
 ylabel('Frequency')
 
-export_fig(['.\dataOUT_masterFOLDER\dataOUT_FOLDER_TWOa_divePlots\SwimEfPreyCatchDur_AllPups.png'],'-zbuffer','-r400','-q1000','-a1')
+export_fig(['.\dataOUT_masterFOLDER\dataOUT_FOLDER_2a_divePlots\SwimEfPreyCatchDur_AllPups.png'],'-zbuffer','-r400','-q1000','-a1')
 
