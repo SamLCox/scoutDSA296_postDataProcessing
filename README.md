@@ -14,6 +14,9 @@ SPECIFIC NOTES FOR MATLAB SCRIPTS:
 These were written useing MATLAB version R2011b.  The license was base software with the statistics and signal processing tool box.  However a number of functions were taken off the matlab file exchange and will need to be sourced for the codes/scripts to work.  Please let me know if I have missed any of these.
 
 export_fig - https://fr.mathworks.com/matlabcentral/fileexchange/23629-export-fig
+
 subtightplot - https://fr.mathworks.com/matlabcentral/fileexchange/39664-subtightplot
+
+m_map - https://www.eoas.ubc.ca/~rich/map.html
 
 
