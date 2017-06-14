@@ -1,0 +1,939 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% Add dive IDs to data and filter data for erroneous measurement or dives where possibly tranmission interuptions have corrupted files - stage 2b
+
+close all
+clear all
+
+PupIDs=[140059;140060;140061;140062;140063;140064;140065;140066;140067;140068;140069;140070;140071;140072;140073;140074;140075;140076;140077;140078];
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% Create folders
+
+f1=fullfile('.\dataOUT_masterFOLDER\dataOUT_FOLDER_2b_UncleanedTempDiveID'); % NOTE - create sub folder to read out data from stage 2 of processing
+if (exist(f1) == 0)
+   mkdir (f1);
+end
+clear f1
+
+f1=fullfile('.\dataOUT_masterFOLDER\dataOUT_FOLDER_2b_DivePlots');
+if (exist(f1) == 0)
+   mkdir (f1);
+end
+clear f1
+
+f1=fullfile('.\dataOUT_masterFOLDER\dataOUT_FOLDER_2b_CleanedAssignedDiveID_DSA_Basse');
+if (exist(f1) == 0)
+   mkdir (f1);
+end
+clear f1
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% Creat a list of data checks - at the end these should all be returning 0's to indicate that not mis-matches or mistakes were found
+
+DurationCheck=ones(size(PupIDs))*NaN;                 % Check durations all match against manual calculations
+DiveCheck_Uncleaned=ones(size(PupIDs))*NaN;           % Check dive ID assignment
+DiveCheck_Cleaned=ones(size(PupIDs))*NaN;             % Check dive ID assignment
+InfiniteValues_VertSpeed=ones(size(PupIDs))*NaN;      % Check for infinite values in vertical speed
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% Plotting specifications
+GAP=[0.1 0.1];
+HEIGHT=[0.05 0.05];
+WIDTH=[0.05 0.05];
+%%%%%%
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% Data merging for combined plots at end
+
+AllDepths=NaN;
+AllVerticalSpeeds=NaN;
+AllSwimEffort=NaN;
+AllPCA=NaN;
+AllDuration=NaN;
+%%%%%%
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% Start loop to go through all data
+
+for LoopID=1:size(PupIDs,1);
+    
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    %% Read in data and sort
+
+    fid=fopen(['.\dataOUT_masterFOLDER\dataOUT_FOLDER_ONE\',num2str(PupIDs(LoopID)),'_Stage1.csv'],'r');
+    B=textscan(fid,'%*s %*s %*s %s %f %f %s %f %s %f %f %f %f %f %f %f %f %f %f %f','delimiter',',','headerlines',0);
+    [LocQual,Lat,Lon,DiveStart,Seg,SegStart,Duration,InitialDepth,FinalDepth,SwimEff,PCA,Pitch,LightS,LightD,TempS,TempD,SurfInt]=deal(B{:});
+    fclose(fid);
+
+    clear B fid
+
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    %% Manually assign deployment ID - sometimes it has been read in as text with surrounding ""????
+    
+    DeployID=ones(size(InitialDepth))*PupIDs(LoopID);
+    
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    %% Assign dive IDs
+
+    DiveID=[NaN;NaN];
+    Count=0;
+
+    for II=1:size(InitialDepth,1);
+        if(isnan(InitialDepth(II))==1);
+            Count=Count+1;
+        end
+        DiveID(II)=Count;
+    end
+    clear II
+
+    %%%%%%%%%%%%%%%%%%%%%%%%% Check all dives are 6 lines long
+
+    if(length(unique(DiveID)) ~= size(InitialDepth,1)/6 || size(InitialDepth,1)/6 ~= Count || length(unique(DiveID)) ~= Count);
+        DiveCheck_Uncleaned(LoopID)=1;
+    else
+        DiveCheck_Uncleaned(LoopID)=0;
+    end
+
+    clear Count ans
+    
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    %% Read out data and diveIDs
+    
+    %%%% Combine required columns
+
+    DeployID=num2cell(DeployID);
+    DiveID=num2cell(DiveID);
+    LocQual=LocQual;
+    Lat=num2cell(Lat);
+    Lon=num2cell(Lon);
+    DiveStart=DiveStart;
+    Seg=num2cell(Seg);
+    SegStart=SegStart;
+    Duration=num2cell(Duration);
+    InitialDepth=num2cell(InitialDepth);
+    FinalDepth=num2cell(FinalDepth);
+    SwimEff=num2cell(SwimEff);
+    PCA=num2cell(PCA);
+    Pitch=num2cell(Pitch);
+    LightS=num2cell(LightS);
+    LightD=num2cell(LightD);
+    TempS=num2cell(TempS);
+    TempD=num2cell(TempD);
+    SurfInt=num2cell(SurfInt);
+
+    DataOut=[DeployID,DiveID,LocQual,Lat,Lon,DiveStart,Seg,SegStart,Duration,InitialDepth,FinalDepth,SwimEff,PCA,Pitch,LightS,LightD,TempS,TempD,SurfInt];
+  
+    cell2csv(['.\dataOUT_masterFOLDER\dataOUT_FOLDER_2b_UncleanedTempDiveID\',num2str(PupIDs(LoopID)),'_Stage2b_UNCLEANED_TempDiveID.csv'],DataOut, ',', 1997, '.', 16);
+
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    %% Clear workspace
+    
+    clear DataOut ans DeployID DiveID LocQual Lat Lon DiveStart Seg SegStart Duration InitialDepth FinalDepth SwimEff PCA Pitch LightS LightD TempS TempD SurfInt
+    
+end
+
+clear LoopID
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% Next loop to clean all data files
+
+for LoopID=1:size(PupIDs,1);
+        
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    %% Read in data and clean    
+        
+    %%%%%%%%%%%%%%%%
+    %% Read in data
+    
+    fid=fopen(['.\dataOUT_masterFOLDER\dataOUT_FOLDER_2b_UncleanedTempDiveID\',num2str(PupIDs(LoopID)),'_Stage2b_UNCLEANED_TempDiveID.csv'],'r');
+    B=textscan(fid,'%f %f %s %f %f %s %f %s %f %f %f %f %f %f %f %f %f %f %f','delimiter',',','headerlines',0);
+    [DeployID,DiveID,LocQual,Lat,Lon,DiveStart,Seg,SegStart,Duration,InitialDepth,FinalDepth,SwimEff,PCA,Pitch,LightS,LightD,TempS,TempD,SurfInt]=deal(B{:});
+    fclose(fid);
+
+    clear B fid
+    
+    %%%%%%%%%%%%%%%%%%%%
+    %% Create a structure to keep a record of dives that have been removed from the dataset and why they were removed
+    
+    DivesRemoved.(['Pup_',num2str(PupIDs(LoopID))])=[num2cell(NaN),num2cell(NaN),num2cell(NaN),num2cell(NaN),num2cell(NaN),num2cell(NaN),num2cell(NaN),num2cell(NaN)];
+    
+    %%%%%%%%%%%%%%%%%%%%%
+    %% Remove dives with internal segments (1,2,3) of depth 0m
+        
+    Ind_A=find(Seg == 1 & InitialDepth == 0);
+    Ind_B=find(Seg == 1 & FinalDepth == 0);
+    Ind_C=find(Seg == 2 & InitialDepth == 0);
+    Ind_D=find(Seg == 2 & FinalDepth == 0);
+    Ind_E=find(Seg == 3 & InitialDepth == 0);
+    Ind_F=find(Seg == 3 & FinalDepth == 0);
+    
+    BadDives=[Ind_A;Ind_B;Ind_C;Ind_D;Ind_E;Ind_F];
+    clear Ind_A Ind_B Ind_C Ind_D Ind_E Ind_F
+    
+    %%%%%%%
+    if(isempty(BadDives)==0);
+
+        DivesToRemove=DiveID(BadDives);
+        DivesToRemove=unique(DivesToRemove);
+        clear BadDives       
+
+        for II=1:size(DivesToRemove,1);
+
+            Ind=find(DiveID == DivesToRemove(II));
+
+            DeleteReason=cell(size(Ind));
+            DeleteReason(:)={'Internal zero values'};
+
+            Temp=[num2cell(DiveID(Ind)),num2cell(Seg(Ind)),SegStart(Ind),num2cell(InitialDepth(Ind)),num2cell(FinalDepth(Ind)),num2cell(Duration(Ind)),num2cell(PCA(Ind)),DeleteReason];
+            DivesRemoved.(['Pup_',num2str(PupIDs(LoopID))])=[DivesRemoved.(['Pup_',num2str(PupIDs(LoopID))]);Temp];
+
+            %%%% Remove dives from data
+            DeployID(Ind)=[];
+            DiveID(Ind)=[];
+            LocQual(Ind)=[];
+            Lat(Ind)=[];
+            Lon(Ind)=[];
+            DiveStart(Ind)=[];
+            Seg(Ind)=[];
+            SegStart(Ind)=[];
+            Duration(Ind)=[];
+            InitialDepth(Ind)=[];
+            FinalDepth(Ind)=[];
+            SwimEff(Ind)=[];
+            PCA(Ind)=[];
+            Pitch(Ind)=[];
+            LightS(Ind)=[];
+            LightD(Ind)=[];
+            TempS(Ind)=[];
+            TempD(Ind)=[];
+            SurfInt(Ind)=[];
+
+            clear Ind Temp DeleteReason
+
+        end
+        clear II
+
+        clear DivesToRemove
+        
+    else
+        
+        clear BadDives
+        
+    end
+    %%%%%%%
+
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    %% Check for sequential identical times and delete the entire dives
+    
+    Counter=0;
+    RepeatTimes=[];
+    
+    for II=2:size(SegStart)
+        if(strcmp(SegStart(II),SegStart(II-1))==1)
+            Counter=Counter+1;
+            RepeatTimes(Counter)=II;
+        end
+    end
+    clear II Counter
+    
+    %%%%%%%
+    if(isempty(RepeatTimes)==0);
+        
+        DivesToRemove=DiveID(RepeatTimes);
+        DivesToRemove=unique(DivesToRemove);
+        clear RepeatTimes
+        
+        for II=1:size(DivesToRemove,1);
+
+            Ind=find(DiveID == DivesToRemove(II));
+
+            DeleteReason=cell(size(Ind));
+            DeleteReason(:)={'Repeat timestamps'};
+
+            Temp=[num2cell(DiveID(Ind)),num2cell(Seg(Ind)),SegStart(Ind),num2cell(InitialDepth(Ind)),num2cell(FinalDepth(Ind)),num2cell(Duration(Ind)),num2cell(PCA(Ind)),DeleteReason];
+            DivesRemoved.(['Pup_',num2str(PupIDs(LoopID))])=[DivesRemoved.(['Pup_',num2str(PupIDs(LoopID))]);Temp];
+
+            %%%%%%% Remove dive for data
+            DeployID(Ind)=[];
+            DiveID(Ind)=[];
+            LocQual(Ind)=[];
+            Lat(Ind)=[];
+            Lon(Ind)=[];
+            DiveStart(Ind)=[];
+            Seg(Ind)=[];
+            SegStart(Ind)=[];
+            Duration(Ind)=[];
+            InitialDepth(Ind)=[];
+            FinalDepth(Ind)=[];
+            SwimEff(Ind)=[];
+            PCA(Ind)=[];
+            Pitch(Ind)=[];
+            LightS(Ind)=[];
+            LightD(Ind)=[];
+            TempS(Ind)=[];
+            TempD(Ind)=[];
+            SurfInt(Ind)=[];
+
+            clear Ind Temp DeleteReason
+        end
+        clear II
+        
+        clear DivesToRemove
+        
+    else
+        
+        clear RepeatTimes
+       
+    end
+    
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    %% Calculate vertical speeds and remove dives outwith values of -3.2 and 3.2 m/s - these values was chosen based on the plots outputted from script 2a
+    
+    VerticalSpeed=(FinalDepth-InitialDepth)./Duration;    
+    InfiniteValues_VertSpeed(LoopID)=length(find(isinf(VerticalSpeed)==1));
+    
+    BadVerticalSpeeds=find(VerticalSpeed < -3.2 | VerticalSpeed > 3.2);
+
+    %%%%%%%
+    if(isempty(BadVerticalSpeeds)==0);
+        
+        DivesToRemove=DiveID(BadVerticalSpeeds);
+        DivesToRemove=unique(DivesToRemove);
+        clear BadVerticalSpeeds
+        
+        for II=1:size(DivesToRemove,1);
+
+            Ind=find(DiveID == DivesToRemove(II));
+
+            DeleteReason=cell(size(Ind));
+            DeleteReason(:)={'Vertical speeds outwith -3 to 3 range'};
+
+            Temp=[num2cell(DiveID(Ind)),num2cell(Seg(Ind)),SegStart(Ind),num2cell(InitialDepth(Ind)),num2cell(FinalDepth(Ind)),num2cell(Duration(Ind)),num2cell(PCA(Ind)),DeleteReason];
+            DivesRemoved.(['Pup_',num2str(PupIDs(LoopID))])=[DivesRemoved.(['Pup_',num2str(PupIDs(LoopID))]);Temp];
+
+            %%%%%%% Remove dive for data
+            DeployID(Ind)=[];
+            DiveID(Ind)=[];
+            LocQual(Ind)=[];
+            Lat(Ind)=[];
+            Lon(Ind)=[];
+            DiveStart(Ind)=[];
+            Seg(Ind)=[];
+            SegStart(Ind)=[];
+            Duration(Ind)=[];
+            InitialDepth(Ind)=[];
+            FinalDepth(Ind)=[];
+            SwimEff(Ind)=[];
+            PCA(Ind)=[];
+            Pitch(Ind)=[];
+            LightS(Ind)=[];
+            LightD(Ind)=[];
+            TempS(Ind)=[];
+            TempD(Ind)=[];
+            SurfInt(Ind)=[];
+            VerticalSpeed(Ind)=[];
+
+            clear Ind Temp DeleteReason
+        end
+        clear II
+        
+        clear DivesToRemove
+        
+    else
+        
+        clear BadVerticalSpeeds
+       
+    end
+    %%%%%%%
+    
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    %% Check duration calculations
+    
+    TempDurCheck=Duration;
+    StartTimeCheck_Str=SegStart;
+    EndTimeCheck_Str=[SegStart(2:end);'NaN'];
+    
+    Ind=find(strcmp(cellstr(StartTimeCheck_Str),'NaN')==1 | strcmp(cellstr(EndTimeCheck_Str),'NaN')==1);
+    
+    TempDurCheck(Ind)=[];
+    StartTimeCheck_Str(Ind)=[];
+    EndTimeCheck_Str(Ind)=[];
+    clear Ind
+    
+    DurDifCheck=etime(datevec(datenum(char(EndTimeCheck_Str),'HH:MM:SS dd-mmm-yyyy')),datevec(datenum(char(StartTimeCheck_Str),'HH:MM:SS dd-mmm-yyyy')));
+    
+    if(max(DurDifCheck-TempDurCheck) > 0 | min(DurDifCheck-TempDurCheck) < 0);
+        DurationCheck(LoopID)=1;
+    else
+        DurationCheck(LoopID)=0;
+    end
+    
+    clear TempDurCheck StartTimeCheck_Str EndTimeCheck_Str DurDifCheck
+    
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    %% Delete dives with negative durations (these are usually where the timestamps of internal segments are not in the right order)
+
+    BadDurationValues=find(Duration < 0);
+    
+    %%%%%%%
+    if(isempty(BadDurationValues)==0);
+        
+        DivesToRemove=DiveID(BadDurationValues);
+        DivesToRemove=unique(DivesToRemove);
+        clear BadDurationValues       
+
+        for II=1:size(DivesToRemove,1);
+
+            Ind=find(DiveID == DivesToRemove(II));
+
+            DeleteReason=cell(size(Ind));
+            DeleteReason(:)={'Durations less than 0 seconds'};
+
+            Temp=[num2cell(DiveID(Ind)),num2cell(Seg(Ind)),SegStart(Ind),num2cell(InitialDepth(Ind)),num2cell(FinalDepth(Ind)),num2cell(Duration(Ind)),num2cell(PCA(Ind)),DeleteReason];
+            DivesRemoved.(['Pup_',num2str(PupIDs(LoopID))])=[DivesRemoved.(['Pup_',num2str(PupIDs(LoopID))]);Temp];
+
+            %%%%%%% Remove dive for data
+            DeployID(Ind)=[];
+            DiveID(Ind)=[];
+            LocQual(Ind)=[];
+            Lat(Ind)=[];
+            Lon(Ind)=[];
+            DiveStart(Ind)=[];
+            Seg(Ind)=[];
+            SegStart(Ind)=[];
+            Duration(Ind)=[];
+            InitialDepth(Ind)=[];
+            FinalDepth(Ind)=[];
+            SwimEff(Ind)=[];
+            PCA(Ind)=[];
+            Pitch(Ind)=[];
+            LightS(Ind)=[];
+            LightD(Ind)=[];
+            TempS(Ind)=[];
+            TempD(Ind)=[];
+            SurfInt(Ind)=[];
+            VerticalSpeed(Ind)=[];
+
+            clear Ind Temp DeleteReason
+
+        end
+        clear II
+
+        clear DivesToRemove
+        
+    else
+        
+        clear BadDurationValues
+        
+    end
+    %%%%%%%
+        
+    %%%%%%%%%%%%%%%%%%%%%%%%%%
+    %% Delete dives with extremely high durations (>2800) - these values was chosen based on the plots outputted from script 2a
+
+    BadDurationValues=find(Duration > 2800);
+    
+    %%%%%%%
+    if(isempty(BadDurationValues)==0);
+        
+        DivesToRemove=DiveID(BadDurationValues);
+        DivesToRemove=unique(DivesToRemove);
+        clear BadDurationValues       
+
+        for II=1:size(DivesToRemove,1);
+
+            Ind=find(DiveID == DivesToRemove(II));
+
+            DeleteReason=cell(size(Ind));
+            DeleteReason(:)={'Durations more than 2800 seconds'};
+
+            Temp=[num2cell(DiveID(Ind)),num2cell(Seg(Ind)),SegStart(Ind),num2cell(InitialDepth(Ind)),num2cell(FinalDepth(Ind)),num2cell(Duration(Ind)),num2cell(PCA(Ind)),DeleteReason];
+            DivesRemoved.(['Pup_',num2str(PupIDs(LoopID))])=[DivesRemoved.(['Pup_',num2str(PupIDs(LoopID))]);Temp];
+
+            %%%%%%% Remove dive for data
+            DeployID(Ind)=[];
+            DiveID(Ind)=[];
+            LocQual(Ind)=[];
+            Lat(Ind)=[];
+            Lon(Ind)=[];
+            DiveStart(Ind)=[];
+            Seg(Ind)=[];
+            SegStart(Ind)=[];
+            Duration(Ind)=[];
+            InitialDepth(Ind)=[];
+            FinalDepth(Ind)=[];
+            SwimEff(Ind)=[];
+            PCA(Ind)=[];
+            Pitch(Ind)=[];
+            LightS(Ind)=[];
+            LightD(Ind)=[];
+            TempS(Ind)=[];
+            TempD(Ind)=[];
+            SurfInt(Ind)=[];
+            VerticalSpeed(Ind)=[];
+
+            clear Ind Temp DeleteReason
+
+        end
+        clear II
+
+        clear DivesToRemove
+        
+    else
+        
+        clear BadDurationValues
+        
+    end
+    %%%%%%%
+    
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    %% Look for values below 1200m depth and remove - this values was chosen based on the plots outputted from script 2a
+
+    BadDepthValues=find(InitialDepth > 1200 | FinalDepth > 1200);
+    
+    %%%%%%%
+    if(isempty(BadDepthValues)==0);
+        
+        DivesToRemove=DiveID(BadDepthValues);
+        DivesToRemove=unique(DivesToRemove);
+        clear BadDepthValues       
+
+        for II=1:size(DivesToRemove,1);
+
+            Ind=find(DiveID == DivesToRemove(II));
+
+            DeleteReason=cell(size(Ind));
+            DeleteReason(:)={'Depths exceeding 1200m'};
+
+            Temp=[num2cell(DiveID(Ind)),num2cell(Seg(Ind)),SegStart(Ind),num2cell(InitialDepth(Ind)),num2cell(FinalDepth(Ind)),num2cell(Duration(Ind)),num2cell(PCA(Ind)),DeleteReason];
+            DivesRemoved.(['Pup_',num2str(PupIDs(LoopID))])=[DivesRemoved.(['Pup_',num2str(PupIDs(LoopID))]);Temp];
+
+            %%%%%%% Remove dive for data
+            DeployID(Ind)=[];
+            DiveID(Ind)=[];
+            LocQual(Ind)=[];
+            Lat(Ind)=[];
+            Lon(Ind)=[];
+            DiveStart(Ind)=[];
+            Seg(Ind)=[];
+            SegStart(Ind)=[];
+            Duration(Ind)=[];
+            InitialDepth(Ind)=[];
+            FinalDepth(Ind)=[];
+            SwimEff(Ind)=[];
+            PCA(Ind)=[];
+            Pitch(Ind)=[];
+            LightS(Ind)=[];
+            LightD(Ind)=[];
+            TempS(Ind)=[];
+            TempD(Ind)=[];
+            SurfInt(Ind)=[];
+            VerticalSpeed(Ind)=[];
+
+            clear Ind Temp DeleteReason
+
+        end
+        clear II
+
+        clear DivesToRemove
+        
+    else
+        
+        clear BadDepthValues
+        
+    end
+
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    %% Look for repeated data (entire repeats of entire dives) - keep the data with the highest quality location match
+
+    %%%% Make the location qualities a vector - best is 1 increasing with decreasing quality
+   
+    LocQual_Vec=ones(size(LocQual))*NaN;
+    LocQual_Vec(strcmp('G',LocQual)==1)=1;
+    LocQual_Vec(strcmp('3',LocQual)==1)=2;
+    LocQual_Vec(strcmp('2',LocQual)==1)=3;
+    LocQual_Vec(strcmp('1',LocQual)==1)=4;
+    LocQual_Vec(strcmp('0*',LocQual)==1)=5;
+    LocQual_Vec(strcmp('0',LocQual)==1)=5;
+    LocQual_Vec(strcmp('A',LocQual)==1)=6;
+    LocQual_Vec(strcmp('a',LocQual)==1)=6;    
+    LocQual_Vec(strcmp('B',LocQual)==1)=7;
+    LocQual_Vec(strcmp('b',LocQual)==1)=7;
+    LocQual_Vec(strcmp('Z',LocQual)==1)=8;    
+    LocQual_Vec(strcmp('z',LocQual)==1)=8; 
+    
+    %%%%%%%%%%%%%%%%
+    
+    DiveRef=unique(DiveID);   
+    repeatDives=NaN;
+    
+    for II=1:size(DiveRef,1);
+        Ind=find(DiveID==DiveRef(II));
+        
+        TimeMatch=DiveStart(Ind(1));
+        clear Ind
+        
+        IndMatch=find(strcmp(TimeMatch,DiveStart)==1);
+        
+        DiveMatch=unique(DiveID(IndMatch));
+        LocMatch=ones(size(DiveMatch))*NaN;
+        
+        for JJ=1:size(DiveMatch,1);
+            LocMatchTemp=LocQual_Vec(DiveID==DiveMatch(JJ));
+            LocMatch(JJ)=LocMatchTemp(1);
+            clear LocMatchTemp
+        end
+        clear JJ
+            
+        Ind_DM=find(LocMatch==min(LocMatch));
+        
+        if(isempty(Ind_DM)==0);       
+            DiveKeep=DiveMatch(Ind_DM(1));     
+            DiveMatch(DiveMatch==DiveKeep)=[];
+            clear DiveKeep Ind_DM
+        else            
+            DiveMatch(DiveMatch==DiveRef(II))=[];
+            clear Ind_DM
+        end
+                          
+        if(isempty(DiveMatch)==0);        
+            repeatDives=[repeatDives;DiveMatch];
+        end
+        
+        clear DiveMatch LocMatch IndMatch TimeMatch
+        
+    end
+    
+    clear II DiveRef
+            
+    repeatDives(1)=[];
+    repeatDives=unique(repeatDives);
+               
+    %%%%%%% Remove repeated data
+    if(isempty(repeatDives)==0);
+        
+        DivesToRemove=repeatDives;
+        clear repeatDives       
+
+        for II=1:size(DivesToRemove,1);
+
+            Ind=find(DiveID == DivesToRemove(II));
+
+            DeleteReason=cell(size(Ind));
+            DeleteReason(:)={'Repeated dive segment'};
+
+            Temp=[num2cell(DiveID(Ind)),num2cell(Seg(Ind)),SegStart(Ind),num2cell(InitialDepth(Ind)),num2cell(FinalDepth(Ind)),num2cell(Duration(Ind)),num2cell(PCA(Ind)),DeleteReason];
+            DivesRemoved.(['Pup_',num2str(PupIDs(LoopID))])=[DivesRemoved.(['Pup_',num2str(PupIDs(LoopID))]);Temp];
+
+            %%%% Remove dive for data
+            DeployID(Ind)=[];
+            DiveID(Ind)=[];
+            LocQual(Ind)=[];
+            Lat(Ind)=[];
+            Lon(Ind)=[];
+            DiveStart(Ind)=[];
+            Seg(Ind)=[];
+            SegStart(Ind)=[];
+            Duration(Ind)=[];
+            InitialDepth(Ind)=[];
+            FinalDepth(Ind)=[];
+            SwimEff(Ind)=[];
+            PCA(Ind)=[];
+            Pitch(Ind)=[];
+            LightS(Ind)=[];
+            LightD(Ind)=[];
+            TempS(Ind)=[];
+            TempD(Ind)=[];
+            SurfInt(Ind)=[];
+            VerticalSpeed(Ind)=[];
+
+            clear Ind Temp DeleteReason
+
+        end
+        clear II
+
+        clear DivesToRemove
+        
+    else
+        
+        clear repeatDives
+        
+    end
+    
+    clear LocQual_Vec
+    
+    %%%%%%%
+    
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    %% Create figures of cleaned data
+       
+    %%%%%%%%%%%%%%%%%%% Depth and vertical speed
+    figure('position',[100,100,1600,800],'color','w','visible','off')
+    
+    subtightplot(2,2,1,GAP,HEIGHT,WIDTH)
+    plot(InitialDepth,'.k','MarkerSize',6)
+    hold on
+    plot(FinalDepth,'.k','MarkerSize',6)
+    hold off
+    ylabel('Depth')
+    xlabel('Index')
+    
+    subtightplot(2,2,2,GAP,HEIGHT,WIDTH)
+    hist([InitialDepth;FinalDepth],40)
+    xlabel('Depth')
+    ylabel('Frequency')
+    
+    subtightplot(2,2,3,GAP,HEIGHT,WIDTH)
+    plot(VerticalSpeed,'.k','MarkerSize',6)
+    hold on
+    ylabel('VerticalSpeed (m/sec)')
+    xlabel('Index')
+    
+    subtightplot(2,2,4,GAP,HEIGHT,WIDTH)
+    hist([VerticalSpeed],40)
+    xlabel('VerticalSpeed (m/sec)')
+    ylabel('Frequency')
+   
+    export_fig(['.\DataPlots_2014-2015\TwoB_DivePlots\DepthVertSpeed_Pup',num2str(PupIDs(LoopID)),'.png'],'-zbuffer','-r400','-q1000','-a1')
+    
+    close
+    
+    %%%%%%%%%%%%%%%%%%% Swim effort, PCA and duration
+    figure('position',[100,100,1600,1200],'color','w','visible','off')
+    
+    subtightplot(3,2,1,GAP,HEIGHT,WIDTH)
+    plot(SwimEff,'.k','MarkerSize',6)
+    hold off
+    ylabel('Swim effort')
+    xlabel('Index')
+    
+    subtightplot(3,2,2,GAP,HEIGHT,WIDTH)
+    hist(SwimEff,40)
+    xlabel('Swim effort')
+    ylabel('Frequency')
+    
+    subtightplot(3,2,3,GAP,HEIGHT,WIDTH)
+    plot(PCA,'.k','MarkerSize',6)
+    hold on
+    ylabel('Prey catch attempt')
+    xlabel('Index')
+    
+    subtightplot(3,2,4,GAP,HEIGHT,WIDTH)
+    hist(PCA,40)
+    xlabel('Prey catch attempt')
+    ylabel('Frequency')
+    
+    subtightplot(3,2,5,GAP,HEIGHT,WIDTH)
+    plot(Duration,'.k','MarkerSize',6)
+    hold on
+    ylabel('Duration (sec)')
+    xlabel('Index')
+    
+    subtightplot(3,2,6,GAP,HEIGHT,WIDTH)
+    hist(Duration,40)
+    xlabel('Duration (sec)')
+    ylabel('Frequency')
+   
+    export_fig(['.\DataPlots_2014-2015\TwoB_DivePlots\SwimEfPreyCatchDur_Pup',num2str(PupIDs(LoopID)),'.png'],'-zbuffer','-r400','-q1000','-a1')
+    
+    close
+    
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    %% For plotting at the end
+    
+    AllDepths=[AllDepths;InitialDepth;FinalDepth];
+    AllVerticalSpeeds=[AllVerticalSpeeds;VerticalSpeed];
+    AllSwimEffort=[AllSwimEffort;SwimEff];
+    AllPCA=[AllPCA;PCA];
+    AllDuration=[AllDuration;Duration];
+        
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    %% Combine required columns
+
+    DeployID=num2cell(DeployID);
+    DiveID=num2cell(DiveID);
+    LocQual=LocQual;
+    Lat=num2cell(Lat);
+    Lon=num2cell(Lon);
+    DiveStart=DiveStart;
+    Seg=num2cell(Seg);
+    SegStart=SegStart;
+    Duration=num2cell(Duration);
+    InitialDepth=num2cell(InitialDepth);
+    FinalDepth=num2cell(FinalDepth);
+    SwimEff=num2cell(SwimEff);
+    PCA=num2cell(PCA);
+    Pitch=num2cell(Pitch);
+    LightS=num2cell(LightS);
+    LightD=num2cell(LightD);
+    TempS=num2cell(TempS);
+    TempD=num2cell(TempD);
+    SurfInt=num2cell(SurfInt);
+    VerticalSpeed=num2cell(VerticalSpeed);
+
+    DataOut=[DeployID,DiveID,LocQual,Lat,Lon,DiveStart,Seg,SegStart,Duration,InitialDepth,FinalDepth,SwimEff,PCA,Pitch,LightS,LightD,TempS,TempD,SurfInt,VerticalSpeed];
+    
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    %% Sort data by time and 
+    
+    Ind=find(strcmp(SegStart,'NaN')==0);
+    
+    DateSort=ones(size(SegStart))*NaN;
+    DateSort(Ind)=datenum(char(SegStart(Ind)),'HH:MM:SS dd-mmm-yyyy');
+    clear Ind
+    
+    Ind=find(strcmp(SegStart,'NaN')==1);
+    DateSort(Ind)=DateSort(Ind+1)-datenum(0,0,0,0,0,1);
+    clear Ind
+    
+    [tmp,Ind]=sort(DateSort, 'ascend');
+    DataOut_Sorted=DataOut(Ind,:);
+    
+    %%%% Keep a record of where any shifts in the data occurred so it can be checked these were correctly corresponding to entire dives etc.
+    DiveSort_ShiftedIndices.(['Ind_Pup',num2str(PupIDs(LoopID))])=find(eq(Ind,[1:length(Ind)]')==0);
+    DiveSort_ShiftedIndices.(['DateStr_Pup',num2str(PupIDs(LoopID))])=datestr(DateSort(find(eq(Ind,[1:length(Ind)]')==0)));
+ 
+    clear DateSort Ind tmp DataOut
+    
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    %% Assign new dive IDs to the cleaned data
+
+    TempAssignDiveID=DataOut_Sorted(:,2);
+    AssignDiveID=cell2mat(TempAssignDiveID);    
+    clear TempAssignDiveID
+    
+    NewDiveID=[1;NaN];
+    Count=1;
+
+    for II=2:size(AssignDiveID,1);
+        if(AssignDiveID(II) ~= AssignDiveID(II-1));
+            Count=Count+1;
+        else(AssignDiveID(II) == AssignDiveID(II-1));
+            Count=Count;
+        end
+        NewDiveID(II)=Count;
+    end
+    clear II
+    
+    %%%% Check dive IDs are OK
+   
+    if(length(unique(NewDiveID)) ~= size(AssignDiveID,1)/6 || size(AssignDiveID,1)/6 ~= Count || length(unique(NewDiveID)) ~= Count);
+        DiveCheck_Cleaned(LoopID)=1;
+    else
+        DiveCheck_Cleaned(LoopID)=0;
+    end
+
+    clear Count ans
+    
+    %%%% Replace in dataset
+    
+    DataOut_Sorted(:,2)=num2cell(NewDiveID);
+    
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    %% Read out data
+
+    cell2csv(['.\dataOUT_masterFOLDER\dataOUT_FOLDER_2b_CleanedAssignedDiveID_DSA_Basse\',num2str(PupIDs(LoopID)),'_StageTwoClean.csv'],DataOut_Sorted, ',', 1997, '.', 16);
+
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    %% Clean workspace
+    
+    clear NewDiveID DataOut_Sorted ans VerticalSpeed DeployID DiveID LocQual Lat Lon DiveStart Seg SegStart Duration InitialDepth FinalDepth SwimEff PCA Pitch LightS LightD TempS TempD SurfInt
+
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    %% Remove first row of dives removed log - this is just 0's anyway to start the variable...
+    
+    DivesRemoved.(['Pup_',num2str(PupIDs(LoopID))])(1,:)=[];
+     
+end
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% Plot for all pups - final data checks
+
+AllDepths(1)=[];
+AllVerticalSpeeds(1)=[];
+AllSwimEffort(1)=[];
+AllPCA(1)=[];
+AllDuration(1)=[];
+
+%%%%%%%%%%%%%%%%%%% Plot for all pups
+%%%%%%%%%%%%%%%%%%% Depth and vertical speed
+
+figure('position',[100,100,1600,800],'color','w','visible','on')
+
+subtightplot(2,2,1,GAP,HEIGHT,WIDTH)
+plot(AllDepths,'.k','MarkerSize',6)
+ylabel('Depth')
+xlabel('Index')
+
+subtightplot(2,2,2,GAP,HEIGHT,WIDTH)
+hist(AllDepths,40)
+xlabel('Depth')
+ylabel('Frequency')
+
+subtightplot(2,2,3,GAP,HEIGHT,WIDTH)
+plot(AllVerticalSpeeds,'.k','MarkerSize',6)
+hold on
+ylabel('VerticalSpeed (m/sec)')
+xlabel('Index')
+
+subtightplot(2,2,4,GAP,HEIGHT,WIDTH)
+hist(AllVerticalSpeeds,40)
+xlabel('VerticalSpeed (m/sec)')
+ylabel('Frequency')    
+
+export_fig(['.\dataOUT_masterFOLDER\dataOUT_FOLDER_2b_DivePlots\DepthVertSpeed_AllPups.png'],'-zbuffer','-r400','-q1000','-a1')
+    
+close
+
+%%%%%%%%%%%%%%%%%%% Swim effort, PCA and duration
+figure('position',[100,100,1600,1200],'color','w','visible','on')
+
+subtightplot(3,2,1,GAP,HEIGHT,WIDTH)
+plot(AllSwimEffort,'.k','MarkerSize',6)
+hold off
+ylabel('Swim effort')
+xlabel('Index')
+
+subtightplot(3,2,2,GAP,HEIGHT,WIDTH)
+hist(AllSwimEffort,40)
+xlabel('Swim effort')
+ylabel('Frequency')
+
+subtightplot(3,2,3,GAP,HEIGHT,WIDTH)
+plot(AllPCA,'.k','MarkerSize',6)
+hold on
+ylabel('Prey catch attempt')
+xlabel('Index')
+
+subtightplot(3,2,4,GAP,HEIGHT,WIDTH)
+hist(AllPCA,40)
+xlabel('Prey catch attempt')
+ylabel('Frequency')
+
+subtightplot(3,2,5,GAP,HEIGHT,WIDTH)
+plot(AllDuration,'.k','MarkerSize',6)
+hold on
+ylabel('Duration (sec)')
+xlabel('Index')
+
+subtightplot(3,2,6,GAP,HEIGHT,WIDTH)
+hist(AllDuration,40)
+xlabel('Duration (sec)')
+ylabel('Frequency')
+
+export_fig(['.\dataOUT_masterFOLDER\dataOUT_FOLDER_2b_DivePlots\SwimEfPreyCatchDur_AllPups.png'],'-zbuffer','-r400','-q1000','-a1')
+
+close
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% Save workspace for future reference - e.g. to those dives removed for various reasons...
+
+clear GAP HEIGHT WIDTH LoopID
+
+save('.\dataOUT_masterFOLDER\dataOUT_FOLDER_2b_UncleanedTempDiveID\DataCheckOutputs.mat')
+
+
