@@ -1,0 +1,340 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% Plot the profiles of all the dives just to get to know the data a little - stage 3 - not necessary for processing purposes but nice to see how data look
+
+close all
+clear all
+
+PupIDs=[140059;140060;140061;140062;140063;140064;140065;140066;140067;140068;140069;140070;140071;140072;140073;140074;140075;140076;140077;140078];
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% Create folders
+
+f1=fullfile('.\dataOUT_masterFOLDER\dataOUT_FOLDER_3_DiveProfiles');
+if (exist(f1) == 0)
+   mkdir (f1);
+end
+clear f1
+
+f1=fullfile('.\dataOUT_masterFOLDER\dataOUT_FOLDER_3_DiveProfilesForPlotting');
+if (exist(f1) == 0)
+   mkdir (f1);
+end
+clear f1
+
+f1=fullfile('.\dataOUT_masterFOLDER\dataOUT_FOLDER_3_DiveDepthsThroughTime');
+if (exist(f1) == 0)
+   mkdir (f1);
+end
+clear f1
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+% %%%%%% Plotting specifications
+% GAP=[0.1 0.1];
+% HEIGHT=[0.05 0.05];
+% WIDTH=[0.05 0.05];
+% %%%%%%
+
+for LoopID=1:size(PupIDs,1);
+    
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    %% Read in data and sort
+
+    fid=fopen(['.\dataOUT_masterFOLDER\dataOUT_FOLDER_2b_DivePlots\',num2str(PupIDs(LoopID)),'_Stage2bClean.csv'],'r');
+    B=textscan(fid,'%f %f %s %f %f %s %f %s %f %f %f %f %f %f %f %f %f %f %f %f','delimiter',',','headerlines',0);
+    [DeployID,DiveID,LocQual,Lat,Lon,DiveStart,Seg,SegStart,Duration,InitialDepth,FinalDepth,SwimEff,PCA,Pitch,LightS,LightD,TempS,TempD,SurfInt,VerticalSpeed]=deal(B{:});
+    fclose(fid);
+
+    clear B fid ans
+        
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    %% Create time and depth vectors
+    
+    NewPups_DiveID=ones(1,1)*NaN;
+    NewPups_Depth=ones(1,1)*NaN;
+    NewPups_DateTime=ones(1,1)*NaN;
+    NewPups_DateTimeStr=num2cell(ones(1,1)*NaN);
+    NewPups_CumSeconds=ones(1,1)*NaN;
+    
+    DiveRef=unique(DiveID);
+    
+    for II=1:size(DiveRef,1);
+               
+        Ind=find(DiveID==DiveRef(II));
+      
+        Temp_DiveID=DiveID(Ind);
+        
+        Temp_Depth(1:5,1)=InitialDepth(Ind(2:end));
+        Temp_Depth(6)=FinalDepth(Ind(end));
+        
+        Temp_DateTime(1:5,1)=datenum(char(SegStart(Ind(2:end))));
+        Temp_DateTime(6)=datenum(char(SegStart(Ind(end)))) + datenum(0,0,0,0,0,Duration(Ind(end)));
+        
+        Temp_DateTimeStr=datestr(Temp_DateTime);
+        
+        Temp_CumSeconds(1)=0;
+        for JJ=2:6
+            Temp_CumSeconds(JJ,1)=Duration(Ind(JJ))+Temp_CumSeconds(JJ-1);
+        end
+        clear JJ
+        
+        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+        %% Add data to vectors
+        
+        NewPups_DiveID=[NewPups_DiveID;Temp_DiveID];
+        NewPups_Depth=[NewPups_Depth;Temp_Depth];
+        NewPups_DateTime=[NewPups_DateTime;Temp_DateTime];
+        NewPups_DateTimeStr=[NewPups_DateTimeStr;cellstr(Temp_DateTimeStr)];
+        NewPups_CumSeconds=[NewPups_CumSeconds;Temp_CumSeconds];
+        
+        clear Temp_DiveID Temp_Depth Temp_DateTime Temp_DateTimeStr Temp_CumSeconds Ind
+    
+    end
+    clear II DiveRef
+    
+    NewPups_DiveID(1)=[];
+    NewPups_Depth(1)=[];
+    NewPups_DateTime(1)=[];
+    NewPups_DateTimeStr(1)=[];
+    NewPups_CumSeconds(1)=[];
+    
+    ContinuousDiveProfileData.(['Pup_',num2str(PupIDs(LoopID))]).DiveID=NewPups_DiveID;
+    ContinuousDiveProfileData.(['Pup_',num2str(PupIDs(LoopID))]).Depth=NewPups_Depth;
+    ContinuousDiveProfileData.(['Pup_',num2str(PupIDs(LoopID))]).DateTime=NewPups_DateTime;
+    ContinuousDiveProfileData.(['Pup_',num2str(PupIDs(LoopID))]).DateTimeStr=NewPups_DateTimeStr;
+    ContinuousDiveProfileData.(['Pup_',num2str(PupIDs(LoopID))]).CumSeconds=NewPups_CumSeconds;
+    
+    clear NewPups_DiveID NewPups_Depth NewPups_DateTime NewPups_DateTimeStr NewPups_CumSeconds
+    clear DeployID DiveID LocQual Lat Lon DiveStart Seg SegStart Duration InitialDepth FinalDepth SwimEff PCA Pitch LightS LightD TempS TempD SurfInt VerticalSpeed
+    
+end
+ 
+clear LoopID
+    
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% Plot dive profiles of each pup and save out 
+    
+for LoopID=1:size(PupIDs,1);    
+
+    %%%% Colour 2d through time
+    figure('position',[100,100,800,600],'color','w','visible','off')
+    cline(ContinuousDiveProfileData.(['Pup_',num2str(PupIDs(LoopID))]).CumSeconds,ContinuousDiveProfileData.(['Pup_',num2str(PupIDs(LoopID))]).Depth,ones(size(ContinuousDiveProfileData.(['Pup_',num2str(PupIDs(LoopID))]).DiveID)),ContinuousDiveProfileData.(['Pup_',num2str(PupIDs(LoopID))]).DiveID,'paruly')
+    hold on
+    ylabel('Depth (m)')
+    xlabel('Time (cumulative seconds from start)')
+    set(gca,'ydir','rev','tickdir','out','ylim',[-0.5 max(ContinuousDiveProfileData.(['Pup_',num2str(PupIDs(LoopID))]).Depth)+4],'xlim',[-5 max(ContinuousDiveProfileData.(['Pup_',num2str(PupIDs(LoopID))]).CumSeconds)+5])
+    box off
+
+    grid off
+    xtick = get(gca,'XTick'); 
+    ylims = get(gca,'Ylim');
+    X = repmat(xtick,2,1);
+    Y = repmat(ylims',1,size(xtick,2));
+    plot(X,Y,':','color',[0.8 0.8 0.8])
+
+    ytick = get(gca,'YTick'); 
+    xlims = get(gca,'Xlim');
+    Y = repmat(ytick,2,1);
+    X = repmat(xlims',1,size(ytick,2));
+    plot(X,Y,':','color',[0.8 0.8 0.8])
+
+    clear xlims ylims xtick ytick X Y
+
+    cline(ContinuousDiveProfileData.(['Pup_',num2str(PupIDs(LoopID))]).CumSeconds,ContinuousDiveProfileData.(['Pup_',num2str(PupIDs(LoopID))]).Depth,ones(size(ContinuousDiveProfileData.(['Pup_',num2str(PupIDs(LoopID))]).DiveID)),ContinuousDiveProfileData.(['Pup_',num2str(PupIDs(LoopID))]).DiveID,'paruly')
+    hold on
+    plot([-5 -5],[-0.5 max(ContinuousDiveProfileData.(['Pup_',num2str(PupIDs(LoopID))]).Depth)+4],'-k')
+    plot([-5 max(ContinuousDiveProfileData.(['Pup_',num2str(PupIDs(LoopID))]).CumSeconds)+5],[max(ContinuousDiveProfileData.(['Pup_',num2str(PupIDs(LoopID))]).Depth)+4 max(ContinuousDiveProfileData.(['Pup_',num2str(PupIDs(LoopID))]).Depth)+4],'-k')
+
+    export_fig(['.\dataOUT_masterFOLDER\dataOUT_FOLDER_3_DiveProfiles\Pup',num2str(PupIDs(LoopID)),'_Colour.png'],'-zbuffer','-r150','-q1000','-a1')
+
+    close
+        
+end
+clear LoopID ans
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% Plot dive depths through time for each pup
+
+for LoopID=1:size(PupIDs,1);
+    
+    Depth=ContinuousDiveProfileData.(['Pup_',num2str(PupIDs(LoopID))]).Depth;
+    dateTime=ContinuousDiveProfileData.(['Pup_',num2str(PupIDs(LoopID))]).DateTime;
+    
+    figure('position',[100,100,1800,600],'color','w','visible','off')
+    plot(dateTime,Depth,'k')
+    hold on
+    xlabel('Time (DD/mmm)','FontSize',12)
+    ylabel('Depth (m)','FontSize',12)
+    set(gca,'ydir','rev','tickdir','out','ylim',[-0.5 max(Depth+20)])
+    box off
+    title(['Pup ',num2str(PupIDs(LoopID))],'FontSize',14)
+    
+    if(size(dateTime,1) < 1000)
+    
+        xticks=[datenum(datestr(dateTime(1))):datenum(0,0,10,0,0,0):datenum(dateTime(end))];
+        set(gca,'tickdir','out','xtick',xticks,'xticklabel',[],'FontSize',12);
+        datetick('x','DD/mmm','keepticks')
+        clear xticks
+    
+    else
+        
+        xticks=[datenum(datestr(dateTime(1))):datenum(0,0,22,0,0,0):datenum(dateTime(end))];
+        set(gca,'tickdir','out','xtick',xticks,'xticklabel',[],'FontSize',12);
+        datetick('x','DD/mmm','keepticks')
+        clear xticks
+    
+    end
+    
+    xlim([dateTime(1)-1 dateTime(end)+1])
+    
+    grid off
+    xtick = get(gca,'XTick'); 
+    ylims = get(gca,'Ylim');
+    X = repmat(xtick,2,1);
+    Y = repmat(ylims',1,size(xtick,2));
+    plot(X,Y,':','color',[0.8 0.8 0.8])
+
+    ytick = get(gca,'YTick'); 
+    xlims = get(gca,'Xlim');
+    Y = repmat(ytick,2,1);
+    X = repmat(xlims',1,size(ytick,2));
+    plot(X,Y,':','color',[0.8 0.8 0.8])
+
+    clear xlims ylims xtick ytick X Y
+
+    plot(dateTime,Depth,'k')
+        
+    export_fig(['.\dataOUT_masterFOLDER\dataOUT_FOLDER_3_DiveDepthsThroughTime\Pup_',num2str(PupIDs(LoopID)),'.png'],'-zbuffer','-r150','-q1000','-a1')
+
+    clear Depth ans dateTime
+    
+end    
+clear LoopID ans
+    
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%    
+%% Save out data
+
+save('.\dataOUT_masterFOLDER\dataOUT_FOLDER_3_DiveProfilesForPlotting\DiveProfilesForPlotting.mat')
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 
+%% Plot time reversed for individual dives for each pup
+
+for LoopID=1:size(PupIDs,1);
+    
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    %% Read in data and sort
+
+    fid=fopen(['.\dataOUT_masterFOLDER\dataOUT_FOLDER_2b_DivePlots\',num2str(PupIDs(LoopID)),'_Stage2bClean.csv'],'r');
+    B=textscan(fid,'%f %f %s %f %f %s %f %s %f %f %f %f %f %f %f %f %f %f %f %f','delimiter',',','headerlines',0);
+    [DeployID,DiveID,LocQual,Lat,Lon,DiveStart,Seg,SegStart,Duration,InitialDepth,FinalDepth,SwimEff,PCA,Pitch,LightS,LightD,TempS,TempD,SurfInt,VerticalSpeed]=deal(B{:});
+    fclose(fid);
+
+    clear B fid ans
+        
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 
+    %% Create time and depth vectors
+    
+    RevNewPups_DiveID=ones(1,1)*NaN;
+    RevNewPups_Depth=ones(1,1)*NaN;
+    RevNewPups_DateTime=ones(1,1)*NaN;
+    RevNewPups_DateTimeStr=num2cell(ones(1,1)*NaN);
+    RevNewPups_CumSeconds=ones(1,1)*NaN;
+    
+    DiveRef=flipud(unique(DiveID));
+    
+    for II=1:size(DiveRef,1);
+               
+        Ind=find(DiveID==DiveRef(II));
+      
+        Temp_DiveID=DiveID(Ind);
+        
+        Temp_Depth(1:5,1)=InitialDepth(Ind(2:end));
+        Temp_Depth(6)=FinalDepth(Ind(end));
+        
+        Temp_DateTime(1:5,1)=datenum(char(SegStart(Ind(2:end))));
+        Temp_DateTime(6)=datenum(char(SegStart(Ind(end)))) + datenum(0,0,0,0,0,Duration(Ind(end)));
+        
+        Temp_DateTimeStr=datestr(Temp_DateTime);
+        
+        Temp_CumSeconds(1)=0;
+        for JJ=2:6
+            Temp_CumSeconds(JJ,1)=Duration(Ind(JJ))+Temp_CumSeconds(JJ-1);
+        end
+        clear JJ
+        
+        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+        %% Add data to vectors
+        
+        RevNewPups_DiveID=[RevNewPups_DiveID;Temp_DiveID];
+        RevNewPups_Depth=[RevNewPups_Depth;Temp_Depth];
+        RevNewPups_DateTime=[RevNewPups_DateTime;Temp_DateTime];
+        RevNewPups_DateTimeStr=[RevNewPups_DateTimeStr;cellstr(Temp_DateTimeStr)];
+        RevNewPups_CumSeconds=[RevNewPups_CumSeconds;Temp_CumSeconds];
+        
+        clear Temp_DiveID Temp_Depth Temp_DateTime Temp_DateTimeStr Temp_CumSeconds Ind
+    
+    end
+    clear II DiveRef
+    
+    RevNewPups_DiveID(1)=[];
+    RevNewPups_Depth(1)=[];
+    RevNewPups_DateTime(1)=[];
+    RevNewPups_DateTimeStr(1)=[];
+    RevNewPups_CumSeconds(1)=[];
+    
+    Rev_ContinuousDiveProfileData.(['Pup_',num2str(PupIDs(LoopID))]).DiveID=RevNewPups_DiveID;
+    Rev_ContinuousDiveProfileData.(['Pup_',num2str(PupIDs(LoopID))]).Depth=RevNewPups_Depth;
+    Rev_ContinuousDiveProfileData.(['Pup_',num2str(PupIDs(LoopID))]).DateTime=RevNewPups_DateTime;
+    Rev_ContinuousDiveProfileData.(['Pup_',num2str(PupIDs(LoopID))]).DateTimeStr=RevNewPups_DateTimeStr;
+    Rev_ContinuousDiveProfileData.(['Pup_',num2str(PupIDs(LoopID))]).CumSeconds=RevNewPups_CumSeconds;
+    
+    clear RevNewPups_DiveID RevNewPups_Depth RevNewPups_DateTime RevNewPups_DateTimeStr RevNewPups_CumSeconds
+    clear DeployID DiveID LocQual Lat Lon DiveStart Seg SegStart Duration InitialDepth FinalDepth SwimEff PCA Pitch LightS LightD TempS TempD SurfInt VerticalSpeed
+    
+end
+ 
+clear LoopID
+    
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% Plot in colour 2d through time (DiveIDs reversed)
+    
+ for LoopID=1:size(PupIDs,1);
+     
+    figure('position',[100,100,800,600],'color','w','visible','off')
+    cline(Rev_ContinuousDiveProfileData.(['Pup_',num2str(PupIDs(LoopID))]).CumSeconds,Rev_ContinuousDiveProfileData.(['Pup_',num2str(PupIDs(LoopID))]).Depth,ones(size(Rev_ContinuousDiveProfileData.(['Pup_',num2str(PupIDs(LoopID))]).DiveID)),Rev_ContinuousDiveProfileData.(['Pup_',num2str(PupIDs(LoopID))]).DiveID,'paruly')
+    hold on
+    ylabel('Depth (m)')
+    xlabel('Time (cumulative seconds from start)')
+    set(gca,'ydir','rev','tickdir','out','ylim',[-0.5 max(Rev_ContinuousDiveProfileData.(['Pup_',num2str(PupIDs(LoopID))]).Depth)+4],'xlim',[-5 max(Rev_ContinuousDiveProfileData.(['Pup_',num2str(PupIDs(LoopID))]).CumSeconds)+5])
+    box off
+
+    grid off
+    xtick = get(gca,'XTick'); 
+    ylims = get(gca,'Ylim');
+    X = repmat(xtick,2,1);
+    Y = repmat(ylims',1,size(xtick,2));
+    plot(X,Y,':','color',[0.8 0.8 0.8])
+
+    ytick = get(gca,'YTick'); 
+    xlims = get(gca,'Xlim');
+    Y = repmat(ytick,2,1);
+    X = repmat(xlims',1,size(ytick,2));
+    plot(X,Y,':','color',[0.8 0.8 0.8])
+
+    clear xlims ylims xtick ytick X Y
+
+    cline(Rev_ContinuousDiveProfileData.(['Pup_',num2str(PupIDs(LoopID))]).CumSeconds,Rev_ContinuousDiveProfileData.(['Pup_',num2str(PupIDs(LoopID))]).Depth,ones(size(Rev_ContinuousDiveProfileData.(['Pup_',num2str(PupIDs(LoopID))]).DiveID)),Rev_ContinuousDiveProfileData.(['Pup_',num2str(PupIDs(LoopID))]).DiveID,'paruly')
+    hold on
+    plot([-5 -5],[-0.5 max(ContinuousDiveProfileData.(['Pup_',num2str(PupIDs(LoopID))]).Depth)+4],'-k')
+    plot([-5 max(Rev_ContinuousDiveProfileData.(['Pup_',num2str(PupIDs(LoopID))]).CumSeconds)+5],[max(Rev_ContinuousDiveProfileData.(['Pup_',num2str(PupIDs(LoopID))]).Depth)+4 max(Rev_ContinuousDiveProfileData.(['Pup_',num2str(PupIDs(LoopID))]).Depth)+4],'-k')
+
+    export_fig(['.\dataOUT_masterFOLDER\dataOUT_FOLDER_3_DiveProfiles\Pup',num2str(PupIDs(LoopID)),'_ColourDiveOrderRev.png'],'-zbuffer','-r150','-q1000','-a1')
+
+    close
+
+ end
+ 
+ clear LoopID
+ 
+ 
