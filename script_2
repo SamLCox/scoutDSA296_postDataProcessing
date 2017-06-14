@@ -1,0 +1,208 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% Plot out depths and vertical speeds of all dives to inspect data - stage 2
+
+PupIDs=[140059;140060;140061;140062;140063;140064;140065;140066;140067;140068;140069;140070;140071;140072;140073;140074;140075;140076;140077;140078];
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% Create folders
+
+f1=fullfile('.\dataOUT_masterFOLDER\dataOUT_FOLDER_TWOa_divePlots'); % NOTE - create sub folder to read out data from stage 2 of processing
+if (exist(f1) == 0)
+   mkdir (f1);
+end
+clear f1
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% Set plotting specifications - and start variables for globalised plotting at end
+
+GAP=[0.1 0.1];
+HEIGHT=[0.05 0.05];
+WIDTH=[0.05 0.05];
+
+AllDepths=NaN;
+AllVerticalSpeeds=NaN;
+AllSwimEffort=NaN;
+AllPCA=NaN;
+AllDuration=NaN;
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% Start loop to read in data for each pup and make corresponding plots
+
+for LoopID=1:size(PupIDs,1);
+        
+    fid=fopen(['.\dataOUT_masterFOLDER\dataOUT_FOLDER_ONE\',num2str(PupIDs(LoopID)),'_Stage1.csv'],'r');
+    B=textscan(fid,'%*s %*s %*s %s %f %f %s %f %s %f %f %f %f %f %f %f %f %f %f %f','delimiter',',','headerlines',0);
+    [LocQual,Lat,Lon,DiveStart,Seg,SegStart,Duration,InitialDepth,FinalDepth,SwimEff,PCA,Pitch,LightS,LightD,TempS,TempD,SurfInt]=deal(B{:});
+    fclose(fid);
+
+    clear B fid 
+    
+    %%%% Calculate vertical speeds
+    VerticalSpeed=(FinalDepth-InitialDepth)./Duration;    
+    InfiniteValues_VertSpeed=find(isinf(VerticalSpeed)==1);
+    VerticalSpeed(InfiniteValues_VertSpeed)=[];
+    
+    %%%% Merge data to combone for all pups
+    AllDepths=[AllDepths;InitialDepth;FinalDepth];
+    AllVerticalSpeeds=[AllVerticalSpeeds;VerticalSpeed];
+    AllSwimEffort=[AllSwimEffort;SwimEff];
+    AllPCA=[AllPCA;PCA];
+    AllDuration=[AllDuration;Duration];
+
+    %%%%%%%%%%%%%%%%%%%
+    %%%% Create figures
+    
+    %%%%%%%%%%%%%%%%%%% Depth and vertical speed
+    figure('position',[100,100,1600,800],'color','w','visible','off')
+    
+    subtightplot(2,2,1,GAP,HEIGHT,WIDTH)
+    plot(InitialDepth,'.k','MarkerSize',6)
+    hold on
+    plot(FinalDepth,'.k','MarkerSize',6)
+    hold off
+    ylabel('Depth')
+    xlabel('Index')
+    
+    subtightplot(2,2,2,GAP,HEIGHT,WIDTH)
+    hist([InitialDepth;FinalDepth],40)
+    xlabel('Depth')
+    ylabel('Frequency')
+    
+    subtightplot(2,2,3,GAP,HEIGHT,WIDTH)
+    plot(VerticalSpeed,'.k','MarkerSize',6)
+    hold on
+    ylabel('VerticalSpeed (m/sec)')
+    xlabel('Index')
+    
+    subtightplot(2,2,4,GAP,HEIGHT,WIDTH)
+    hist([VerticalSpeed],40)
+    xlabel('VerticalSpeed (m/sec)')
+    ylabel('Frequency')
+   
+    export_fig(['.\dataOUT_masterFOLDER\dataOUT_FOLDER_TWOa_divePlots\DepthVertSpeed_Pup',num2str(PupIDs(LoopID)),'.png'],'-zbuffer','-r400','-q1000','-a1')
+    
+    close
+    
+    %%%%%%%%%%%%%%%%%%% Swim effort, PCA and duration
+    figure('position',[100,100,1600,1200],'color','w','visible','off')
+    
+    subtightplot(3,2,1,GAP,HEIGHT,WIDTH)
+    plot(SwimEff,'.k','MarkerSize',6)
+    hold off
+    ylabel('Swim effort')
+    xlabel('Index')
+    
+    subtightplot(3,2,2,GAP,HEIGHT,WIDTH)
+    hist(SwimEff,40)
+    xlabel('Swim effort')
+    ylabel('Frequency')
+    
+    subtightplot(3,2,3,GAP,HEIGHT,WIDTH)
+    plot(PCA,'.k','MarkerSize',6)
+    hold on
+    ylabel('Prey catch attempt')
+    xlabel('Index')
+    
+    subtightplot(3,2,4,GAP,HEIGHT,WIDTH)
+    hist(PCA,40)
+    xlabel('Prey catch attempt')
+    ylabel('Frequency')
+    
+    subtightplot(3,2,5,GAP,HEIGHT,WIDTH)
+    plot(Duration,'.k','MarkerSize',6)
+    hold on
+    ylabel('Duration (sec)')
+    xlabel('Index')
+    
+    subtightplot(3,2,6,GAP,HEIGHT,WIDTH)
+    hist(Duration,40)
+    xlabel('Duration (sec)')
+    ylabel('Frequency')
+   
+    export_fig(['.\dataOUT_masterFOLDER\dataOUT_FOLDER_TWOa_divePlots\SwimEfPreyCatchDur_Pup',num2str(PupIDs(LoopID)),'.png'],'-zbuffer','-r400','-q1000','-a1')
+    
+    close
+    
+    %%%%%%%%%%%%%%%%%%%
+    %%%%  Tidy workspace
+    
+    keep PupIDs GAP HEIGHT WIDTH LoopID AllDepths AllVerticalSpeeds AllSwimEffort AllPCA AllDuration
+    
+    close all
+    
+end
+
+AllDepths(1)=[];
+AllVerticalSpeeds(1)=[];
+AllSwimEffort(1)=[];
+AllPCA(1)=[];
+AllDuration(1)=[];
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% Plots for all pups
+
+%%%%%%%%%%%%%%%%%%% Depth and vertical speed
+
+figure('position',[100,100,1600,800],'color','w','visible','on')
+
+subtightplot(2,2,1,GAP,HEIGHT,WIDTH)
+plot(AllDepths,'.k','MarkerSize',6)
+ylabel('Depth')
+xlabel('Index')
+
+subtightplot(2,2,2,GAP,HEIGHT,WIDTH)
+hist(AllDepths,40)
+xlabel('Depth')
+ylabel('Frequency')
+
+subtightplot(2,2,3,GAP,HEIGHT,WIDTH)
+plot(AllVerticalSpeeds,'.k','MarkerSize',6)
+hold on
+ylabel('VerticalSpeed (m/sec)')
+xlabel('Index')
+
+subtightplot(2,2,4,GAP,HEIGHT,WIDTH)
+hist(AllVerticalSpeeds,40)
+xlabel('VerticalSpeed (m/sec)')
+ylabel('Frequency')    
+
+export_fig(['.\dataOUT_masterFOLDER\dataOUT_FOLDER_TWOa_divePlots\DepthVertSpeed_AllPups.png'],'-zbuffer','-r400','-q1000','-a1')
+    
+%%%%%%%%%%%%%%%%%%% Swim effort, PCA and duration
+figure('position',[100,100,1600,1200],'color','w','visible','on')
+
+subtightplot(3,2,1,GAP,HEIGHT,WIDTH)
+plot(AllSwimEffort,'.k','MarkerSize',6)
+hold off
+ylabel('Swim effort')
+xlabel('Index')
+
+subtightplot(3,2,2,GAP,HEIGHT,WIDTH)
+hist(AllSwimEffort,40)
+xlabel('Swim effort')
+ylabel('Frequency')
+
+subtightplot(3,2,3,GAP,HEIGHT,WIDTH)
+plot(AllPCA,'.k','MarkerSize',6)
+hold on
+ylabel('Prey catch attempt')
+xlabel('Index')
+
+subtightplot(3,2,4,GAP,HEIGHT,WIDTH)
+hist(AllPCA,40)
+xlabel('Prey catch attempt')
+ylabel('Frequency')
+
+subtightplot(3,2,5,GAP,HEIGHT,WIDTH)
+plot(AllDuration,'.k','MarkerSize',6)
+hold on
+ylabel('Duration (sec)')
+xlabel('Index')
+
+subtightplot(3,2,6,GAP,HEIGHT,WIDTH)
+hist(AllDuration,40)
+xlabel('Duration (sec)')
+ylabel('Frequency')
+
+export_fig(['.\dataOUT_masterFOLDER\dataOUT_FOLDER_TWOa_divePlots\SwimEfPreyCatchDur_AllPups.png'],'-zbuffer','-r400','-q1000','-a1')
+
