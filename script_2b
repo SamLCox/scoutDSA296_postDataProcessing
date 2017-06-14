@@ -835,7 +835,7 @@ for LoopID=1:size(PupIDs,1);
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     %% Read out data
 
-    cell2csv(['.\dataOUT_masterFOLDER\dataOUT_FOLDER_2b_CleanedAssignedDiveID_DSA_Basse\',num2str(PupIDs(LoopID)),'_StageTwoClean.csv'],DataOut_Sorted, ',', 1997, '.', 16);
+    cell2csv(['.\dataOUT_masterFOLDER\dataOUT_FOLDER_2b_CleanedAssignedDiveID_DSA_Basse\',num2str(PupIDs(LoopID)),'_Stage2bClean.csv'],DataOut_Sorted, ',', 1997, '.', 16);
 
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     %% Clean workspace
