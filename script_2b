@@ -21,7 +21,7 @@ if (exist(f1) == 0)
 end
 clear f1
 
-f1=fullfile('.\dataOUT_masterFOLDER\dataOUT_FOLDER_2b_CleanedAssignedDiveID_DSA_Basse');
+f1=fullfile('.\dataOUT_masterFOLDER\dataOUT_FOLDER_2b_CleanedAssignedDiveID');
 if (exist(f1) == 0)
    mkdir (f1);
 end
@@ -696,7 +696,7 @@ for LoopID=1:size(PupIDs,1);
     xlabel('VerticalSpeed (m/sec)')
     ylabel('Frequency')
    
-    export_fig(['.\DataPlots_2014-2015\TwoB_DivePlots\DepthVertSpeed_Pup',num2str(PupIDs(LoopID)),'.png'],'-zbuffer','-r400','-q1000','-a1')
+    export_fig(['.\dataOUT_masterFOLDER\dataOUT_FOLDER_2b_DivePlots\DepthVertSpeed_Pup',num2str(PupIDs(LoopID)),'.png'],'-zbuffer','-r400','-q1000','-a1')
     
     close
     
@@ -736,7 +736,7 @@ for LoopID=1:size(PupIDs,1);
     xlabel('Duration (sec)')
     ylabel('Frequency')
    
-    export_fig(['.\DataPlots_2014-2015\TwoB_DivePlots\SwimEfPreyCatchDur_Pup',num2str(PupIDs(LoopID)),'.png'],'-zbuffer','-r400','-q1000','-a1')
+    export_fig(['.\dataOUT_masterFOLDER\dataOUT_FOLDER_2b_DivePlots\SwimEfPreyCatchDur_Pup',num2str(PupIDs(LoopID)),'.png'],'-zbuffer','-r400','-q1000','-a1')
     
     close
     
@@ -835,7 +835,7 @@ for LoopID=1:size(PupIDs,1);
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     %% Read out data
 
-    cell2csv(['.\dataOUT_masterFOLDER\dataOUT_FOLDER_2b_CleanedAssignedDiveID_DSA_Basse\',num2str(PupIDs(LoopID)),'_Stage2bClean.csv'],DataOut_Sorted, ',', 1997, '.', 16);
+    cell2csv(['.\dataOUT_masterFOLDER\dataOUT_FOLDER_2b_CleanedAssignedDiveID\',num2str(PupIDs(LoopID)),'_Stage2bClean.csv'],DataOut_Sorted, ',', 1997, '.', 16);
 
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     %% Clean workspace
