@@ -1,0 +1,111 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% Correct pitch orientations - sometimes the axis's on the tags are not quite right which messes up pitch estimates (for swimming and effort and prey catch attemps - axis positions are always OK - at least for this study as validated using retrieved archival data) - stage 5
+
+close all
+clear all
+
+PupIDs=[140059;140060;140061;140062;140063;140064;140065;140066;140067;140068;140069;140070;140071;140072;140073;140074;140075;140076;140077;140078];
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%% Create folders
+
+f1=fullfile('.\dataOUT_masterFOLDER\dataOUT_FOLDER_5_pitchCorrected');
+if (exist(f1) == 0)
+   mkdir (f1);
+end
+clear f1
+
+f1=fullfile('.\dataOUT_masterFOLDER\dataOUT_FOLDER_5_pitchPlots');
+if (exist(f1) == 0)
+   mkdir (f1);
+end
+clear f1
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% Correct the pitch orientation of each dive
+
+for LoopID=1:size(PupIDs,1);
+    
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    %% Read in data
+    
+    fid=fopen(['.\dataOUT_masterFOLDER\dataOUT_FOLDER_4_LocationCorrected\',num2str(PupIDs(LoopID)),'_Stage4.csv'],'r');
+    B=textscan(fid,'%f %f %s %f %f %s %f %s %f %f %f %f %f %f %f %f %f %f %f %f %f %f %f','delimiter',',','headerlines',0);
+    [DeployID,DiveID,LocQual,Lat,Lon,DiveStart,Seg,SegStart,Duration,InitialDepth,FinalDepth,SwimEff,PCA,Pitch,LightS,LightD,TempS,TempD,SurfInt,VerticalSpeed,Distance,TimeBetweenLoc,HorizSpeed]=deal(B{:});   
+    fclose(fid);
+
+    clear B fid ans
+
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    %% Plot pitch against vertical speed - use this to determine if the pitch orientation is flipped
+    
+    figure('position',[100,100,800,800],'color','w','visible','off')
+    plot(VerticalSpeed, Pitch, '.k')
+    ylabel('Pitch')
+    xlabel('Vertical speed (m/s)')
+    box off
+    export_fig(['.\dataOUT_masterFOLDER\dataOUT_FOLDER_5_pitchPlots\Pup',num2str(PupIDs(LoopID)),'_pitchRaw.png'],'-zbuffer','-r150','-q1000','-a1')
+    close all
+    
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    %% Correct pitch using the slope of the relationship between vertical speed and pitch
+    
+    Slope = corrcoef(VerticalSpeed(isnan(Pitch)==0), Pitch(isnan(Pitch)==0));
+    
+    if(Slope(1, 2) > 0);
+        Pitch = Pitch * -1;
+    end
+    
+    clear Slope
+    
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    %% Plot corrected pitch against vertical speed
+    
+    figure('position',[100,100,800,800],'color','w','visible','off')
+    plot(VerticalSpeed, Pitch, '.k')
+    ylabel('Pitch')
+    xlabel('Vertical speed (m/s)')
+    box off
+    export_fig(['.\dataOUT_masterFOLDER\dataOUT_FOLDER_5_pitchPlots\Pup',num2str(PupIDs(LoopID)),'_pitchCorrected.png'],'-zbuffer','-r150','-q1000','-a1')
+    close all
+    
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    %% Read out data
+
+    DeployID=num2cell(DeployID);
+    DiveID=num2cell(DiveID);
+    LocQual=LocQual;
+    Lat=num2cell(Lat);
+    Lon=num2cell(Lon);
+    DiveStart=DiveStart;
+    Seg=num2cell(Seg);
+    SegStart=SegStart;
+    Duration=num2cell(Duration);
+    InitialDepth=num2cell(InitialDepth);
+    FinalDepth=num2cell(FinalDepth);
+    SwimEff=num2cell(SwimEff);
+    PCA=num2cell(PCA);
+    Pitch=num2cell(Pitch);
+    LightS=num2cell(LightS);
+    LightD=num2cell(LightD);
+    TempS=num2cell(TempS);
+    TempD=num2cell(TempD);
+    SurfInt=num2cell(SurfInt);
+    VerticalSpeed=num2cell(VerticalSpeed);
+    Distance=num2cell(Distance);
+    TimeBetweenLoc=num2cell(TimeBetweenLoc);
+    HorizSpeed=num2cell(HorizSpeed);
+    
+    DataOut=[DeployID,DiveID,LocQual,Lat,Lon,DiveStart,Seg,SegStart,Duration,InitialDepth,FinalDepth,SwimEff,PCA,Pitch,LightS,LightD,TempS,TempD,SurfInt,VerticalSpeed,Distance,TimeBetweenLoc,HorizSpeed];
+    
+    clear DeployID DiveID LocQual Lat Lon DiveStart Seg SegStart Duration InitialDepth FinalDepth SwimEff PCA Pitch LightS LightD TempS TempD SurfInt VerticalSpeed Distance TimeBetweenLoc HorizSpeed
+    
+    cell2csv(['.\dataOUT_masterFOLDER\dataOUT_FOLDER_5_pitchCorrected\Pup',num2str(PupIDs(LoopID)),'_Stage5.csv'],DataOut, ',', 1997, '.', 16);
+
+    clear DataOut
+    
+end
+
+
+
+
