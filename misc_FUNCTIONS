@@ -1,0 +1,130 @@
+function[DivesIndNaN]=ArgosLocDiveFilter(RefLat,RefLon,RefDateTime,RefLocQual,RefDiveID,SpeedThres,LocThres)
+
+DivesIndNaN=NaN;
+
+IndBegin=RefDiveID(1);
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% First get the indices of low quality locations
+
+Ind_A=find(strcmp(RefLocQual,'Z')==1 | strcmp(RefLocQual,'z')==1);
+
+if(isempty(Ind_A)==0);
+    DivesIndNaN=[DivesIndNaN;RefDiveID(Ind_A)];
+end
+
+clear Ind_A
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% Second run speed filter to identify unrealistic points 
+
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    %%%% Calculate distances between all points
+
+DivesInd_Temp=NaN;
+
+while(isempty(DivesInd_Temp)==0)
+
+    DivesInd_Temp=NaN;
+
+    DistanceToP1=ones(size(RefLat))*NaN;
+
+    for II=2:size(RefLat,1);
+
+        lat=RefLat(II);
+        lon=RefLon(II);
+
+        latP1=RefLat(II-1);
+        lonP1=RefLon(II-1);   
+
+        DistanceToP1(II)=gsw_distance([lon lonP1],[lat latP1]);
+
+        clear lat lon latP1 lonP1
+    end
+    clear II
+
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    %%%% Calulate times between all points
+
+    TimeToP1=ones(size(RefDateTime))*NaN;
+
+    for II=2:size(RefDateTime,1);
+
+        Time=RefDateTime(II);
+
+        TimeP1=RefDateTime(II-1);
+
+        TimeToP1(II)=etime(datevec(Time),datevec(TimeP1));
+
+        clear Time TimeP1 
+    end
+    clear II
+
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    %%%% Next calulate speeds between all points and record indices
+
+    SpeedToP1=DistanceToP1./TimeToP1;
+
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    %%%% Find diveIDs with bad locations
+
+    Ind_B=find(SpeedToP1 > SpeedThres & DistanceToP1 > LocThres);
+    if(isempty(Ind_B)==0);
+        DivesInd_Temp=[DivesInd_Temp;RefDiveID(Ind_B)];
+    end
+
+    DivesInd_Temp(1)=[];
+
+    clear SpeedToP1 TimeToP1 DistanceToP1
+    clear Ind_B
+    
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    %%%% Get rid of diveIDs with bad locations
+
+    if(isempty(DivesInd_Temp)==0);
+        
+        DiveDelete=[unique(DivesInd_Temp);RefDiveID(1)];
+
+        for II=1:size(DiveDelete);
+
+            IndDelete=find(RefDiveID==DiveDelete(II));
+
+            RefDiveID(IndDelete)=[];    
+            RefLat(IndDelete)=[];
+            RefLon(IndDelete)=[];
+            RefDateTime(IndDelete)=[];
+            RefLocQual(IndDelete)=[];
+
+            clear IndDelete
+
+        end
+        clear II DiveDelete
+        
+    end
+    
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    %%%% Add dive IDs to list of those dives with bad locations
+    
+    if(isempty(DivesInd_Temp)==0);
+        
+        DivesIndNaN=[DivesIndNaN;unique(DivesInd_Temp)];
+        
+    end
+    
+end
+
+DivesIndNaN=[DivesIndNaN;IndBegin];
+
+DivesIndNaN(1)=[];
+
+-----------------------------------------------------------------------------------------------------------------------------------------
+-----------------------------------------------------------------------------------------------------------------------------------------
+
