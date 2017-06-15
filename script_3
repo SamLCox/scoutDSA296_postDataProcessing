@@ -40,7 +40,7 @@ for LoopID=1:size(PupIDs,1);
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     %% Read in data and sort
 
-    fid=fopen(['.\dataOUT_masterFOLDER\dataOUT_FOLDER_2b_CleanedAssignedDiveID_DSA_Basse\',num2str(PupIDs(LoopID)),'_Stage2bClean.csv'],'r');
+    fid=fopen(['.\dataOUT_masterFOLDER\dataOUT_FOLDER_2b_CleanedAssignedDiveID\',num2str(PupIDs(LoopID)),'_Stage2bClean.csv'],'r');
     B=textscan(fid,'%f %f %s %f %f %s %f %s %f %f %f %f %f %f %f %f %f %f %f %f','delimiter',',','headerlines',0);
     [DeployID,DiveID,LocQual,Lat,Lon,DiveStart,Seg,SegStart,Duration,InitialDepth,FinalDepth,SwimEff,PCA,Pitch,LightS,LightD,TempS,TempD,SurfInt,VerticalSpeed]=deal(B{:});
     fclose(fid);
@@ -225,7 +225,7 @@ for LoopID=1:size(PupIDs,1);
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     %% Read in data and sort
 
-    fid=fopen(['.\dataOUT_masterFOLDER\dataOUT_FOLDER_2b_CleanedAssignedDiveID_DSA_Basse\',num2str(PupIDs(LoopID)),'_Stage2bClean.csv'],'r');
+    fid=fopen(['.\dataOUT_masterFOLDER\dataOUT_FOLDER_2b_CleanedAssignedDiveID\',num2str(PupIDs(LoopID)),'_Stage2bClean.csv'],'r');
     B=textscan(fid,'%f %f %s %f %f %s %f %s %f %f %f %f %f %f %f %f %f %f %f %f','delimiter',',','headerlines',0);
     [DeployID,DiveID,LocQual,Lat,Lon,DiveStart,Seg,SegStart,Duration,InitialDepth,FinalDepth,SwimEff,PCA,Pitch,LightS,LightD,TempS,TempD,SurfInt,VerticalSpeed]=deal(B{:});
     fclose(fid);
