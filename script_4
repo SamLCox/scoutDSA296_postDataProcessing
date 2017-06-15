@@ -338,7 +338,7 @@ for LoopID=1:size(PupIDs,1);
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     %% Read out data
 
-    cell2csv(['.\dataOUT_masterFOLDER\dataOUT_FOLDER_4_LocationCorrected\',num2str(PupIDs(LoopID)),'_StageFour.csv'],DataOut, ',', 1997, '.', 16);
+    cell2csv(['.\dataOUT_masterFOLDER\dataOUT_FOLDER_4_LocationCorrected\',num2str(PupIDs(LoopID)),'_Stage4.csv'],DataOut, ',', 1997, '.', 16);
 
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     %% Clean workspace
