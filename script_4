@@ -1,0 +1,417 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% NaN unrealistic location fixes (these can be replaced later with corrections if wanted) - stage 4
+
+close all
+clear all
+
+PupIDs=[140059;140060;140061;140062;140063;140064;140065;140066;140067;140068;140069;140070;140071;140072;140073;140074;140075;140076;140077;140078];
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%% Create folders
+
+f1=fullfile('.\dataOUT_masterFOLDER\dataOUT_FOLDER_4_TimeBetweenLoc');
+if (exist(f1) == 0)
+   mkdir (f1);
+end
+clear f1
+
+f1=fullfile('.\dataOUT_masterFOLDER\dataOUT_FOLDER_4_DistanceSpeed');
+if (exist(f1) == 0)
+   mkdir (f1);
+end
+clear f1
+
+f1=fullfile('.\dataOUT_masterFOLDER\dataOUT_FOLDER_4_Trajectories');
+if (exist(f1) == 0)
+   mkdir (f1);
+end
+clear f1
+
+f1=fullfile('.\dataOUT_masterFOLDER\dataOUT_FOLDER_4_LocationCorrected');
+if (exist(f1) == 0)
+   mkdir (f1);
+end
+clear f1
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%%%%%% Plotting specifications
+GAP=[0.1 0.1];
+HEIGHT=[0.05 0.05];
+WIDTH=[0.05 0.05];
+%%%%%%    
+
+%%%%%% Data merging for combined plots at end
+AllDistance=NaN;
+AllTimeBetweenLoc=NaN;
+AllHorizSpeed=NaN;
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% Add horizontal speeds and surface times to data set and then plot histograms of these
+
+for LoopID=1:size(PupIDs,1);
+    
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    %% Read in data and sort
+
+    fid=fopen(['.\dataOUT_masterFOLDER\dataOUT_FOLDER_2b_CleanedAssignedDiveID\',num2str(PupIDs(LoopID)),'_Stage2bClean.csv'],'r');
+    B=textscan(fid,'%f %f %s %f %f %s %f %s %f %f %f %f %f %f %f %f %f %f %f %f','delimiter',',','headerlines',0);
+    [DeployID,DiveID,LocQual,Lat,Lon,DiveStart,Seg,SegStart,Duration,InitialDepth,FinalDepth,SwimEff,PCA,Pitch,LightS,LightD,TempS,TempD,SurfInt,VerticalSpeed]=deal(B{:});
+    fclose(fid);
+
+    clear B fid ans
+    
+    DateTime=datenum(char(DiveStart),'HH:MM:SS dd-mmm-yyyy');
+    
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 
+    %%%% Create info per dive and run speed filter
+    
+    RefDiveID=unique(DiveID);
+    
+    RefLat=ones(size(RefDiveID))*NaN;
+    RefLon=ones(size(RefDiveID))*NaN;
+    RefDateTime=ones(size(RefDiveID))*NaN;
+    RefLocQual=num2cell(ones(size(RefDiveID))*NaN);
+        
+    for II=1:size(RefDiveID,1);
+        
+        Ind=find(DiveID == RefDiveID(II));
+        
+        RefLat(II)=Lat(Ind(1));
+        RefLon(II)=Lon(Ind(1));
+        RefDateTime(II)=DateTime(Ind(1));
+        RefLocQual(II)=LocQual(Ind(1));
+        
+        clear Ind
+    end
+    clear II
+    
+    SpeedThres=3;
+    LocThres=0;
+       
+    [DivesIndNaN]=ArgosLocDiveFilter(RefLat,RefLon,RefDateTime,RefLocQual,RefDiveID,SpeedThres,LocThres);
+    
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 
+    %%%% Create HorizSpeed, Distance and TimeBetweenLoc variables
+    
+    HorizSpeed=ones(size(DiveID))*NaN;
+    Distance=ones(size(DiveID))*NaN;
+    TimeBetweenLoc=ones(size(DiveID))*NaN;
+    
+    for II=2:size(RefDiveID,1);
+        
+        Ind=find(DiveID == RefDiveID(II));
+                     
+        TempDist=gsw_distance([RefLon(II) RefLon(II-1)],[RefLat(II) RefLat(II-1)]);
+        TempTime=etime(datevec(RefDateTime(II)),datevec(RefDateTime(II-1)));
+        TempSpeed=TempDist/TempTime;
+                           
+        Distance(Ind)=TempDist;
+        TimeBetweenLoc(Ind)=TempTime;
+        HorizSpeed(Ind)=TempSpeed;
+        
+        clear Ind TempDist TempTime TempSpeed
+        
+    end
+    clear II
+    
+    clear RefDateTime RefLocQual RefDiveID SpeedThres LocThres
+    
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%    
+    %%%% Plot distances, time between locations and horizontal speeds -uncleaned
+    
+    figure('position',[100,100,1800,1200],'color','w','visible','off')
+
+    subtightplot(4,2,1,GAP,HEIGHT,WIDTH)
+    plot(Distance,'.k','MarkerSize',6)
+    hold off
+    ylabel('Distance between locations (m)')
+    xlabel('Index')
+
+    subtightplot(4,2,2,GAP,HEIGHT,WIDTH)
+    hist(Distance,40)
+    xlabel('Distance (m)')
+    ylabel('Frequency')
+
+    subtightplot(4,2,3,GAP,HEIGHT,WIDTH)
+    plot(HorizSpeed,'.k','MarkerSize',6)
+    hold on
+    ylabel('Horizonatal speed (m/s)')
+    xlabel('Index')
+
+    subtightplot(4,2,4,GAP,HEIGHT,WIDTH)
+    hist(HorizSpeed,40)
+    xlabel('Horizonatal speed (m/s)')
+    ylabel('Frequency')
+
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%    
+    %%%% NaN unrealistic locations and make a note of them (based on speed filter)
+    
+    LocationsNaNd.(['Pup_',num2str(PupIDs(LoopID))])=[num2cell(NaN),num2cell(NaN),num2cell(NaN),num2cell(NaN),num2cell(NaN),num2cell(NaN),num2cell(NaN),num2cell(NaN)];
+    
+    if(isempty(DivesIndNaN)==0);
+        
+        for II=1:size(DivesIndNaN,1);
+
+                Ind=find(DiveID == DivesIndNaN(II));
+                
+                DeleteReason=cell(size(Ind));
+                DeleteReason(:)={'Speed filter'};
+
+                Temp=[num2cell(DiveID(Ind)),DiveStart(Ind),num2cell(Lat(Ind)),num2cell(Lon(Ind)),num2cell(HorizSpeed(Ind)),num2cell(Distance(Ind)),num2cell(TimeBetweenLoc(Ind)),DeleteReason];
+                LocationsNaNd.(['Pup_',num2str(PupIDs(LoopID))])=[LocationsNaNd.(['Pup_',num2str(PupIDs(LoopID))]);Temp];
+
+                % NaN bad locations, distances and speeds
+               
+                Lat(Ind)=NaN;
+                Lon(Ind)=NaN;
+                Distance(Ind)=NaN;
+                HorizSpeed(Ind)=NaN;
+
+                clear Ind Temp DeleteReason
+
+        end
+        clear II
+        
+    end
+    
+    clear DivesIndNaN
+   
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%    
+    %%%% NaN locations on land
+    
+    m_proj('lambert','longitudes',[48 128],'latitudes',[-70 -40]); % These coordinates should be set to encompass the area your study takes place in
+    m_gshhs_h('save','XXXXXX\m_map\m_map\private\SouthernOcean.mat'); % This route should be set to the m_map path
+    Coast=load('XXXXXX\m_map\m_map\private\SouthernOcean.mat'); % This route should be set to the m_map path
+   
+    %%%% Determine if location is within the coast polygon
+    isInland = inpolygon(Lat,Lon,Coast.ncst(:,2),Coast.ncst(:,1));
+    Ind=find(isInland==1);   
+    
+    if(isempty(Ind)==0)
+        
+        DeleteReason=cell(size(Ind));
+        DeleteReason(:)={'On land'};
+
+        Temp=[num2cell(DiveID(Ind)),DiveStart(Ind),num2cell(Lat(Ind)),num2cell(Lon(Ind)),num2cell(HorizSpeed(Ind)),num2cell(Distance(Ind)),num2cell(TimeBetweenLoc(Ind)),DeleteReason];
+        LocationsNaNd.(['Pup_',num2str(PupIDs(LoopID))])=[LocationsNaNd.(['Pup_',num2str(PupIDs(LoopID))]);Temp];
+
+        Lat(Ind)=NaN;
+        Lon(Ind)=NaN;
+        Distance(Ind)=NaN;
+        HorizSpeed(Ind)=NaN;
+        
+        clear DeleteReason Temp
+        
+    end
+    
+    clear Coast Ind isInland
+    
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%    
+    %%%% Add cleaned distances, time between locations and horizontal speeds to plot
+    
+    subtightplot(4,2,5,GAP,HEIGHT,WIDTH)
+    plot(Distance,'.k','MarkerSize',6)
+    hold off
+    ylabel('Distance between locations (m)')
+    xlabel('Index')
+
+    subtightplot(4,2,6,GAP,HEIGHT,WIDTH)
+    hist(Distance,40)
+    xlabel('Distance (m)')
+    ylabel('Frequency')
+
+    subtightplot(4,2,7,GAP,HEIGHT,WIDTH)
+    plot(HorizSpeed,'.k','MarkerSize',6)
+    hold on
+    ylabel('Horizonatal speed (m/s)')
+    xlabel('Index')
+
+    subtightplot(4,2,8,GAP,HEIGHT,WIDTH)
+    hist(HorizSpeed,40)
+    xlabel('Horizonatal speed (m/s)')
+    ylabel('Frequency')
+
+    export_fig(['.\dataOUT_masterFOLDER\dataOUT_FOLDER_4_DistanceSpeed\',num2str(PupIDs(LoopID)),'_DistanceSpeed.png'],'-zbuffer','-r400','-q1000','-a1')
+
+    close
+    
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%    
+    %%%% Plot times between locations
+    
+    figure('position',[100,100,900,600],'color','w','visible','off')
+
+    subtightplot(1,2,1,GAP,HEIGHT,WIDTH)
+    plot(TimeBetweenLoc,'.k','MarkerSize',6)
+    hold off
+    ylabel('Time between locations (s)')
+    xlabel('Index')
+
+    subtightplot(1,2,2,GAP,HEIGHT,WIDTH)
+    hist(TimeBetweenLoc,40)
+    xlabel('Time between locations (s)')
+    ylabel('Frequency')
+    
+    export_fig(['.\dataOUT_masterFOLDER\dataOUT_FOLDER_4_TimeBetweenLoc\',num2str(PupIDs(LoopID)),'_TimeBetweenLoc.png'],'-zbuffer','-r400','-q1000','-a1')
+
+    close
+    
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%    
+    %%%% Plot locations - old (NaN'd) and new
+
+    figure('position',[10,10,1500,1200],'renderer','zbuffer','color','white','visible','off')
+    m_proj('lambert','longitudes',[38 118],'latitudes',[-68 -44]);
+
+    m_usercoast('SouthernOcean.mat','linewidth',2,'color',[0.3 0.3 0.3]); % This route should be set to the m_map path - the file needs to be visible to matlab
+    m_usercoast('SouthernOcean.mat','patch',[0.9 0.9 0.9]); % This route should be set to the m_map path - the file needs to be visible to matlab
+    hold on
+
+    m_plot(RefLon,RefLat,'r','LineWidth',1)
+    m_plot(RefLon,RefLat,'.r','Markersize',6)
+    
+    m_plot(Lon,Lat,'b','LineWidth',1)
+    m_plot(Lon,Lat,'.b','Markersize',6)
+    
+    set(gca,'FontSize',12)
+    title(['Pup ',num2str(PupIDs(LoopID))],'FontSize',14)
+    xlabel('Longitude (DD)','FontSize',12,'fontweight','bold')
+    ylabel('Latitude (DD)','FontSize',12,'fontweight','bold')
+
+    m_grid('tickstyle','dd','fontsize',12,'tickdir','out','box','fancy');
+    
+    axes('Position',[0.760971786833856 0.260671302264843 0.134012539184953 0.0546713147410358])
+    box on;
+    hold on
+    plot(0.05,0.75,'.r','MarkerSize',16)
+    xlim([0 0.5])
+    ylim([0 1])
+    text(0.1,0.75,'NaNd locations','horizontalalignment','left','verticalalignment','middle','FontSize',14)
+
+    plot(0.05,0.25,'.b','MarkerSize',16)
+    xlim([0 0.5])
+    ylim([0 1])
+    text(0.1,0.25,'Kept locations','horizontalalignment','left','verticalalignment','middle','FontSize',14)
+    set(gca,'xtick',[],'ytick',[])
+    
+    export_fig(['.\dataOUT_masterFOLDER\dataOUT_FOLDER_4_Trajectories\Pup',num2str(PupIDs(LoopID)),'.png'],'-zbuffer','-r150','-q1000','-a1')
+
+    close
+    
+    clear RefLat RefLon
+    
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    %%%%%% Data merging for combined plots at end
+    
+    AllDistance=[AllDistance;Distance];
+    AllTimeBetweenLoc=[AllTimeBetweenLoc;TimeBetweenLoc];
+    AllHorizSpeed=[AllHorizSpeed;HorizSpeed];
+
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    %% Combine required columns
+
+    DeployID=num2cell(DeployID);
+    DiveID=num2cell(DiveID);
+    LocQual=LocQual;
+    Lat=num2cell(Lat);
+    Lon=num2cell(Lon);
+    DiveStart=DiveStart;
+    Seg=num2cell(Seg);
+    SegStart=SegStart;
+    Duration=num2cell(Duration);
+    InitialDepth=num2cell(InitialDepth);
+    FinalDepth=num2cell(FinalDepth);
+    SwimEff=num2cell(SwimEff);
+    PCA=num2cell(PCA);
+    Pitch=num2cell(Pitch);
+    LightS=num2cell(LightS);
+    LightD=num2cell(LightD);
+    TempS=num2cell(TempS);
+    TempD=num2cell(TempD);
+    SurfInt=num2cell(SurfInt);
+    VerticalSpeed=num2cell(VerticalSpeed);
+    Distance=num2cell(Distance);
+    TimeBetweenLoc=num2cell(TimeBetweenLoc);
+    HorizSpeed=num2cell(HorizSpeed);
+    
+    DataOut=[DeployID,DiveID,LocQual,Lat,Lon,DiveStart,Seg,SegStart,Duration,InitialDepth,FinalDepth,SwimEff,PCA,Pitch,LightS,LightD,TempS,TempD,SurfInt,VerticalSpeed,Distance,TimeBetweenLoc,HorizSpeed];
+
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    %% Read out data
+
+    cell2csv(['.\dataOUT_masterFOLDER\dataOUT_FOLDER_4_LocationCorrected\',num2str(PupIDs(LoopID)),'_StageFour.csv'],DataOut, ',', 1997, '.', 16);
+
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    %% Clean workspace
+    
+    clear DivesIndNaN DateTime ans DataOut Distance TimeBetweenLoc HorizSpeed VerticalSpeed DeployID DiveID LocQual Lat Lon DiveStart Seg SegStart Duration InitialDepth FinalDepth SwimEff PCA Pitch LightS LightD TempS TempD SurfInt
+   
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    %% Get rid of first row of LocationsNaNd (which was just a zero to start off the variable)
+    
+    LocationsNaNd.(['Pup_',num2str(PupIDs(LoopID))])(1,:)=[];
+    
+end
+
+clear LoopID PupIDs GAP HEIGHT WIDTH
+
+save('.\dataOUT_masterFOLDER\dataOUT_FOLDER_4_LocationCorrected\NaNdLocations.mat')
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 
+%% Plot all data outputs from all pups
+
+%%%%%% Plotting specifications
+GAP=[0.1 0.1];
+HEIGHT=[0.05 0.05];
+WIDTH=[0.05 0.05];
+%%%%%%   
+
+%%%% Plot time between locations - all pups
+
+figure('position',[100,100,900,600],'color','w','visible','off')
+
+subtightplot(1,2,1,GAP,HEIGHT,WIDTH)
+plot(AllTimeBetweenLoc,'.k','MarkerSize',6)
+hold off
+ylabel('Time between locations (s)')
+xlabel('Index')
+
+subtightplot(1,2,2,GAP,HEIGHT,WIDTH)
+hist(AllTimeBetweenLoc,40)
+xlabel('Time between locations (s)')
+ylabel('Frequency')
+
+export_fig(['.\dataOUT_masterFOLDER\dataOUT_FOLDER_4_TimeBetweenLoc\AllPups_TimeBetweenLoc.png'],'-zbuffer','-r400','-q1000','-a1')
+
+close
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%    
+%%%% Plot all distances, time between locations and horizontal speeds
+
+figure('position',[100,100,1800,1200],'color','w','visible','on')
+
+subtightplot(2,2,1,GAP,HEIGHT,WIDTH)
+plot(AllDistance,'.k','MarkerSize',6)
+hold off
+ylabel('Distance between locations (m)')
+xlabel('Index')
+
+subtightplot(2,2,2,GAP,HEIGHT,WIDTH)
+hist(AllDistance,40)
+xlabel('Distance (m)')
+ylabel('Frequency')
+
+subtightplot(2,2,3,GAP,HEIGHT,WIDTH)
+plot(AllHorizSpeed,'.k','MarkerSize',6)
+hold on
+ylabel('Horizonatal speed (m/s)')
+xlabel('Index')
+
+subtightplot(2,2,4,GAP,HEIGHT,WIDTH)
+hist(AllHorizSpeed,40)
+xlabel('Horizonatal speed (m/s)')
+ylabel('Frequency')
+
+export_fig(['.\dataOUT_masterFOLDER\dataOUT_FOLDER_4_DistanceSpeed\AllPups_DistanceSpeed.png'],'-zbuffer','-r400','-q1000','-a1')
+
+close   
