@@ -1,0 +1,53 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% Stack all the pup data together - stage 7
+
+close all
+clear all
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% Create folders
+
+f1=fullfile('.\dataOUT_masterFOLDER\dataOUT_FOLDER_7_allPupData');
+if (exist(f1) == 0)
+   mkdir (f1);
+end
+clear f1
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% Create general variables
+
+PupIDs=[140059;140060;140061;140062;140063;140064;140065;140066;140067;140068;140069;140070;140071;140072;140073;140074;140075;140076;140077;140078];
+
+%%%%%% Data merging for combined output of all pups at end
+
+transmittedData_AllPups = num2cell(ones(1, 18) * NaN);
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% Start loop to match information from pupData and high resolution tags
+
+for LoopID=1:size(PupIDs,1);
+
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    %% Read in information of each dive
+
+    %%%%%%%%%% Read in the transmitted data
+
+    fid = fopen(['.\dataOUT_masterFOLDER\dataOUT_FOLDER_6_segmentsSorted\Pup',num2str(PupIDs(LoopID)),'_Stage6.csv'], 'r');
+    B = textscan(fid, '%s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s', 'delimiter', ',', 'headerlines', 0);
+    [pupData(:,1), pupData(:,2), pupData(:,3), pupData(:,4), pupData(:,5), pupData(:,6), pupData(:,7), pupData(:,8), pupData(:,9), pupData(:,10), pupData(:,11), pupData(:,12), pupData(:,13), pupData(:,14), pupData(:,15), pupData(:,16), pupData(:,17), pupData(:,18)] = deal(B{:});
+    clear fid B
+
+    headerpupData = pupData(1, :);
+    pupData(1,:) = [];
+
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    %% Add to combined overall dataset of all pups
+
+    transmittedData_AllPups(1, :) = headerpupData;
+    transmittedData_AllPups = [transmittedData_AllPups; pupData];
+
+    clear pupData headerpupData
+
+end
+
+cell2csv(['.\dataOUT_masterFOLDER\dataOUT_FOLDER_7_allPupData\summarisedData_AllPUPS_segScale.csv'],transmittedData_AllPups, ',', 1997, '.', 16);
