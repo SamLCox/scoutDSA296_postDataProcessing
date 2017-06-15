@@ -1,6 +1,6 @@
 # scoutDSA296_postDataProcessing
 
-MATLAB codes/scripts for post-processing recevied transmissions from wildlife computer SCOUT-DSA-296 tags.  See below for specific notes regarding the use of MATLAB scripts.  The functions script contains functions used within scripts written by myself.
+MATLAB codes/scripts for post-processing recevied transmissions from wildlife computer SCOUT-DSA-296 tags.  See below for specific notes regarding the use of MATLAB scripts.  The functions script contains functions used within scripts written by myself.  Codes/scripts are to be run in numercial order (i.e. 1, 2a, 2b, 3, 4...).
 
 This code accompanies the paper: XXXXX.
 
