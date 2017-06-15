@@ -1,6 +1,6 @@
 # scoutDSA296_postDataProcessing
 
-MATLAB and R codes/scripts for post-processing recevied transmissions from wildlife computer SCOUT-DSA-296 tags.  See below for specific notes regarding the use of MATLAB scripts.
+MATLAB codes/scripts for post-processing recevied transmissions from wildlife computer SCOUT-DSA-296 tags.  See below for specific notes regarding the use of MATLAB scripts.  The functions script contains functions used within scripts written by myself.
 
 This code accompanies the paper: XXXXX.
 
@@ -11,7 +11,7 @@ Please do not hesitate to contact me with any questions.
 ---------------------------------------------------------------------------------------------------------------------
 SPECIFIC NOTES FOR MATLAB SCRIPTS:
 
-These were written useing MATLAB version R2011b.  The license was base software with the statistics and signal processing tool box.  However a number of functions were taken off the matlab file exchange and will need to be sourced for the codes/scripts to work.  Please let me know if I have missed any of these.
+These were written useing MATLAB version R2011b.  The license was base software with the statistics and signal processing tool box.  However a number of functions used across the scripts were taken from the matlab file exchange and will need to be sourced for the codes/scripts to work.  Please let me know if I have missed any of these.
 
 export_fig - https://fr.mathworks.com/matlabcentral/fileexchange/23629-export-fig
 
@@ -19,4 +19,6 @@ subtightplot - https://fr.mathworks.com/matlabcentral/fileexchange/39664-subtigh
 
 m_map - https://www.eoas.ubc.ca/~rich/map.html
 
+cell2csv - http://fr.mathworks.com/matlabcentral/fileexchange/47055-cell-array-to-csv-file--improved-cell2csv-m-
 
+scripps toolbox (The Matlab Toolbox of Ch. Begler) - http://mooring.ucsd.edu/software/matlab/doc/toolbox/index.html
