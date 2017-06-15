@@ -1,0 +1,174 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% Tidy up data structure - get rid of NaN's between dives - stage 6
+
+close all
+clear all
+
+PupIDs=[140059;140060;140061;140062;140063;140064;140065;140066;140067;140068;140069;140070;140071;140072;140073;140074;140075;140076;140077;140078];
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%% Create folders
+
+f1=fullfile('.\dataOUT_masterFOLDER\dataOUT_FOLDER_6_segmentsSorted');
+if (exist(f1) == 0)
+   mkdir (f1);
+end
+clear f1
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% Summarise information of each dive
+
+for LoopID=1:size(PupIDs,1);
+
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    %% Read in data
+    
+    fid=fopen(['.\dataOUT_masterFOLDER\dataOUT_FOLDER_5_pitchCorrected\Pup',num2str(PupIDs(LoopID)),'_Stage5.csv'],'r');
+    B=textscan(fid,'%f %f %s %f %f %s %f %s %f %f %f %f %f %f %f %f %f %f %f %f %f %f %f','delimiter',',','headerlines',0);
+    [DeployID,DiveID,LocQual,Lat,Lon,DiveStart,Seg,SegStart,Duration,InitialDepth,FinalDepth,SwimEff,PCA,Pitch,LightS,LightD,TempS,TempD,SurfInt,VerticalSpeed,Distance,TimeBetweenLoc,HorizSpeed]=deal(B{:});   
+    fclose(fid);
+
+    clear B fid ans
+    
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    %% Sort out surface int
+    
+    for II = 2:size(SurfInt,1);
+        if(isnan(SurfInt(II)) == 1);
+            SurfInt(II) = SurfInt(II-1);
+        end
+    end
+    clear II
+    
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    %% Remove NaNs - that cause problems and are not needed
+    
+    indDelete_NaN = find(strcmp(SegStart, 'NaN') == 1);
+        
+    DeployID(indDelete_NaN) = [];
+    DiveID(indDelete_NaN) = [];
+    LocQual(indDelete_NaN) = [];
+    Lat(indDelete_NaN) = [];
+    Lon(indDelete_NaN) = [];
+    DiveStart(indDelete_NaN) = [];
+    Seg(indDelete_NaN) = [];
+    SegStart(indDelete_NaN) = [];
+    Duration(indDelete_NaN) = [];
+    InitialDepth(indDelete_NaN) = [];
+    FinalDepth(indDelete_NaN) = [];
+    SwimEff(indDelete_NaN) = [];
+    PCA(indDelete_NaN) = [];
+    Pitch(indDelete_NaN) = [];
+    LightS(indDelete_NaN) = [];
+    LightD(indDelete_NaN) = [];
+    TempS(indDelete_NaN) = [];
+    TempD(indDelete_NaN) = [];
+    SurfInt(indDelete_NaN) = [];
+    VerticalSpeed(indDelete_NaN) = [];
+    Distance(indDelete_NaN) = [];
+    TimeBetweenLoc(indDelete_NaN) = [];
+    HorizSpeed(indDelete_NaN) = [];
+    
+    clear indDelete_NaN
+    
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    %% Create date num for segment start
+    
+    SegStart_DateNum=datenum(char(SegStart),'HH:MM:SS dd-mmm-yyyy');
+    
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    %% Create dive end variable
+    
+    DiveID_REF=unique(DiveID);
+    DiveEnd_DateNum=ones(size(DiveStart))*NaN;
+    
+    for II=1:size(DiveID_REF,1);
+        Ind = find(DiveID == DiveID_REF(II));
+        DiveEnd_DateNum(Ind) = SegStart_DateNum(Ind(end)) + datenum(0,0,0,0,0,Duration(Ind(end)));
+        clear Ind
+    end
+    clear DiveID_REF II
+        
+    DiveEnd = datestr(DiveEnd_DateNum);
+        
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    %% Create segment end variable  
+    
+    SegEnd_DateNum = SegStart_DateNum + datenum(0,0,0,0,0,Duration);
+    SegEnd = datestr(SegEnd_DateNum);
+
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    %% Reassign segment IDs
+    
+    Seg = Seg + 1;
+    
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    %% Add solar altitude - this can be used to determine if it is night or day
+        
+    DiveStart_DateVec=datevec(char(DiveStart),'HH:MM:SS dd-mmm-yyyy');
+
+    SolarAlt=ones(size(DiveID))*NaN;    
+    
+    for II=1:size(DiveID,1);
+        
+        if(isnan(Lat(II))==0 & isnan(Lon(II)) == 0);
+      
+            [SunRiseSet,Day,Dec,Alt,Azm,Rad] = suncycle(Lat(II),Lon(II),datenum(DiveStart_DateVec(II,1),DiveStart_DateVec(II,2),DiveStart_DateVec(II,3)));
+
+            MatchDate=datenum(DiveStart_DateVec(II,1),DiveStart_DateVec(II,2),DiveStart_DateVec(II,3),DiveStart_DateVec(II,4),DiveStart_DateVec(II,5),DiveStart_DateVec(II,6))-datenum(DiveStart_DateVec(II,1),1,1);
+            SolarAlt(II)=Alt(findnearest(MatchDate,Day));
+
+            clear MatchDate SunRiseSet Day Dec Alt Azm Rad
+        
+        end
+        
+    end
+    clear II
+    
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    %% Write out data with headers
+    
+    DeployID=num2cell(DeployID);
+    DiveID=num2cell(DiveID);
+
+    Lat=num2cell(Lat);
+    Lon=num2cell(Lon);
+    
+    DiveStart=DiveStart;
+    DiveEnd=cellstr(DiveEnd);
+    
+    Seg=num2cell(Seg);
+    SegStart=SegStart;
+    SegEnd=cellstr(SegEnd);
+    
+    Duration=num2cell(Duration);
+    
+    InitialDepth=num2cell(InitialDepth);
+    FinalDepth=num2cell(FinalDepth);
+    
+    SwimEff=num2cell(SwimEff);
+    PCA=num2cell(PCA);
+    Pitch=num2cell(Pitch);
+
+    VerticalSpeed=num2cell(VerticalSpeed);
+    
+    SolarAlt=num2cell(SolarAlt);
+    
+    SurfInt=num2cell(SurfInt);
+    
+    DataOutHeader={'pupID','segmentID','diveID','lat','lon','diveStart','diveEnd','segStart','segEnd','duration','initialDepth','finalDepth','swimEffort','PCA','pitch','verticalSpeed','solarAlt','surfaceInt'};
+    DataOut=[DeployID,Seg,DiveID,Lat,Lon,DiveStart,DiveEnd,SegStart,SegEnd,Duration,InitialDepth,FinalDepth,SwimEff,PCA,Pitch,VerticalSpeed,SolarAlt,SurfInt];
+
+    DataWrite=[DataOutHeader;DataOut];
+
+    cell2csv(['.\dataOUT_masterFOLDER\dataOUT_FOLDER_6_segmentsSorted\Pup',num2str(PupIDs(LoopID)),'_Stage6.csv'],DataWrite, ',', 1997, '.', 16);
+
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    %% Clear workspace
+    
+    clear DiveStart_DateVec SolarAlt DiveEnd_DateNum SegStart_DateNum SegEnd_DateNum SegEnd DiveEnd DataWrite DataOutHeader DataOut Distance TimeBetweenLoc HorizSpeed VerticalSpeed DeployID DiveID LocQual Lat Lon DiveStart Seg SegStart Duration InitialDepth FinalDepth SwimEff PCA Pitch LightS LightD TempS TempD SurfInt
+
+end    
+    
+    
+    
