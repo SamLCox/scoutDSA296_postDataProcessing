@@ -260,7 +260,7 @@ for LoopID=1:size(PupIDs,1);
     %%%% Plot locations - old (NaN'd) and new
 
     figure('position',[10,10,1500,1200],'renderer','zbuffer','color','white','visible','off')
-    m_proj('lambert','longitudes',[38 118],'latitudes',[-68 -44]);
+    m_proj('lambert','longitudes',[38 118],'latitudes',[-68 -44]); % These coordinates should be set to encompass the area your study takes place in
 
     m_usercoast('SouthernOcean.mat','linewidth',2,'color',[0.3 0.3 0.3]); % This route should be set to the m_map path - the file needs to be visible to matlab
     m_usercoast('SouthernOcean.mat','patch',[0.9 0.9 0.9]); % This route should be set to the m_map path - the file needs to be visible to matlab
