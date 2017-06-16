@@ -61,7 +61,7 @@ for LoopID=1:size(PupIDs,1);
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     %% Read in data and sort
 
-    fid=fopen(['.\dataOUT_masterFOLDER\dataOUT_FOLDER_ONE\',num2str(PupIDs(LoopID)),'_Stage1.csv'],'r');
+    fid=fopen(['.\dataOUT_masterFOLDER\dataOUT_FOLDER_1\',num2str(PupIDs(LoopID)),'_Stage1.csv'],'r');
     B=textscan(fid,'%*s %*s %*s %s %f %f %s %f %s %f %f %f %f %f %f %f %f %f %f %f','delimiter',',','headerlines',0);
     [LocQual,Lat,Lon,DiveStart,Seg,SegStart,Duration,InitialDepth,FinalDepth,SwimEff,PCA,Pitch,LightS,LightD,TempS,TempD,SurfInt]=deal(B{:});
     fclose(fid);
